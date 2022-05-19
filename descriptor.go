@@ -32,7 +32,6 @@ func (h *Header) GetStringsOffset() *Addr {
 
 type Relocation map[Addr]uint32
 
-// func ReadRelocation(r binstruct.Reader, offset, count int64) (Relocation, error) {
 func (t *Relocation) BinRead(r *binread.Reader, args ...Args) error {
 	reloc := make(map[Addr]uint32)
 
@@ -98,9 +97,6 @@ func (n *NamedOffset) BinRead(r *binread.Reader, args ...Args) error {
 			stringsOffset = offset
 		}
 	}
-	// if offset, ok := args[0].(uint32); ok {
-	//         stringsOffset = offset
-	// }
 
 	before := uint32(r.CurrentPosition())
 
@@ -118,7 +114,6 @@ func (n *NamedOffset) BinRead(r *binread.Reader, args ...Args) error {
 	var namePtr Ptr[NullTerminatedString]
 	ptrArgs := Args{"offset": Addr(stringOffset + before + stringsOffset), "seekfrom": io.SeekStart}
 	err = r.Decode(&namePtr, ptrArgs)
-	// err = r.Decode(&namePtr, Addr(stringOffset+before+stringsOffset), io.SeekStart)
 	if err != nil {
 		return err
 	}
@@ -151,26 +146,19 @@ func (d *Descriptor) BinRead(r *binread.Reader, _ ...Args) error {
 		return err
 	}
 
-	rootRefOffset := 8 * (d.RootCount + d.RefCount)
-
-	// reloc := make([]Addr, d.RelocationCount)
-	// err = r.Decode(&reloc)
 	relocArgs := Args{"offset": d.RelocationOffset, "count": d.RelocationCount}
 	err = r.Decode(&d.Relocation, relocArgs)
 	if err != nil {
 		return err
 	}
 
-	// _, _ = r.Seek(int64(4*d.RelocationCount), io.SeekCurrent)
-
+	rootRefOffset := 8 * (d.RootCount + d.RefCount)
 	rootRefArgs := Args{"offset": rootRefOffset}
-
 	d.Roots = make([]Root, d.RootCount)
 	err = r.Decode(&d.Roots, rootRefArgs)
 	if err != nil {
 		return err
 	}
-
 	d.Refs = make([]Ref, d.RefCount)
 	err = r.Decode(&d.Refs, rootRefArgs)
 	if err != nil {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
@@ -33,5 +34,8 @@ func main() {
 	}
 
 	// fmt.Printf("%#+v\n", h)
-	spew.Dump(h.Data.ActionTable)
+	spew.Dump(h.Data.ActionTable.Value)
+
+	fmt.Println(len(h.Data.ActionTable.Value))
+
 }

@@ -10,7 +10,7 @@ import (
 
 const debug = false
 
-func printDebug(x ...interface{}) {
+func printlnDebug(x ...interface{}) {
 	if debug {
 		fmt.Println(x...)
 	}
@@ -35,6 +35,10 @@ type BinReader interface {
 	BinRead(*Reader, ...Args) error
 }
 
+type AfterParser interface {
+	AfterParse(*Reader, ...Args) error
+}
+
 func (r *Reader) Decode(data any, args ...Args) error {
 	return unmarshal(r, data, args...)
 }
@@ -48,23 +52,23 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 	var err error
 
 	// fmt.Println("Type:", reflect.TypeOf(data))
-	printDebug("Type:", reflect.TypeOf(data))
+	printlnDebug("Type:", reflect.TypeOf(data))
 
-	inter := reflect.TypeOf((*BinReader)(nil)).Elem()
-	if reflect.TypeOf(data).Implements(inter) {
+	interBinReader := reflect.TypeOf((*BinReader)(nil)).Elem()
+	if reflect.TypeOf(data).Implements(interBinReader) {
 		// fmt.Println("Reader")
-		printDebug("Reader")
+		printlnDebug("Reader")
 		err = any(data).(BinReader).BinRead(r, args...)
 	} else {
 		v := rv.Elem()
 		switch v.Kind() {
 		case reflect.Struct:
 			// fmt.Println("Struct")
-			printDebug("Struct:", v.NumField())
+			printlnDebug("Struct:", v.NumField())
 			for i := 0; i < v.NumField(); i++ {
 				field := reflect.New(v.Field(i).Type()).Interface()
 				err = unmarshal(r, field, args...)
-				printDebug("Field:", v.Type().Field(i).Name)
+				printlnDebug("Field:", v.Type().Field(i).Name)
 				if v.Field(i).CanSet() {
 					v.Field(i).Set(reflect.ValueOf(field).Elem())
 				}
@@ -74,7 +78,7 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 			}
 		case reflect.Array:
 			// fmt.Println("Array")
-			printDebug("Array")
+			printlnDebug("Array")
 			for i := 0; i < v.Len(); i++ {
 				item := reflect.New(v.Index(i).Type()).Interface()
 				err = unmarshal(r, item, args...)
@@ -84,7 +88,7 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 				}
 			}
 		case reflect.Slice:
-			printDebug("Slice")
+			printlnDebug("Slice")
 			if v.Len() > 0 {
 				for i := 0; i < v.Len(); i++ {
 					item := reflect.New(v.Index(i).Type()).Interface()
@@ -98,13 +102,22 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 			// return errors.New("Slices are not suppported")
 		default:
 			// fmt.Println("Other Type:", v.Type())
-			printDebug("Other Type:", v.Type())
+			printlnDebug("Other Type:", v.Type())
 			err = binary.Read(r, binary.BigEndian, data)
 		}
 	}
 
 	if err != nil {
 		return err
+	}
+
+	interAfterParser := reflect.TypeOf((*AfterParser)(nil)).Elem()
+	if reflect.TypeOf(data).Implements(interAfterParser) {
+		printlnDebug("AfterParsing")
+		err = any(data).(AfterParser).AfterParse(r, args...)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
