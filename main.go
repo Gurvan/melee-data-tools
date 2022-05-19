@@ -16,6 +16,7 @@ func PrettyString(obj interface{}) string {
 
 func main() {
 	file, err := os.Open("file.dat")
+	// file, err := os.Open("file2.dat")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -23,7 +24,8 @@ func main() {
 	reader := binread.NewReader(file)
 
 	// h := Header{}
-	h := Descriptor{}
+	// h := Descriptor{}
+	h := FighterFile{}
 
 	err = reader.Decode(&h)
 	if err != nil {
@@ -31,5 +33,5 @@ func main() {
 	}
 
 	// fmt.Printf("%#+v\n", h)
-	spew.Dump(h)
+	spew.Dump(h.Data.ActionTable)
 }

@@ -16,6 +16,8 @@ func printDebug(x ...interface{}) {
 	}
 }
 
+type Args = map[string]interface{}
+
 type Reader struct {
 	io.ReadSeeker
 }
@@ -30,14 +32,14 @@ func (r *Reader) CurrentPosition() int64 {
 }
 
 type BinReader interface {
-	BinRead(*Reader, ...interface{}) error
+	BinRead(*Reader, ...Args) error
 }
 
-func (r *Reader) Decode(data any, args ...interface{}) error {
+func (r *Reader) Decode(data any, args ...Args) error {
 	return unmarshal(r, data, args...)
 }
 
-func unmarshal(r *Reader, data any, args ...interface{}) error {
+func unmarshal(r *Reader, data any, args ...Args) error {
 	rv := reflect.ValueOf(data)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return errors.New("Not a pointer")
@@ -58,11 +60,14 @@ func unmarshal(r *Reader, data any, args ...interface{}) error {
 		switch v.Kind() {
 		case reflect.Struct:
 			// fmt.Println("Struct")
-			printDebug("Struct")
+			printDebug("Struct:", v.NumField())
 			for i := 0; i < v.NumField(); i++ {
 				field := reflect.New(v.Field(i).Type()).Interface()
 				err = unmarshal(r, field, args...)
-				v.Field(i).Set(reflect.ValueOf(field).Elem())
+				printDebug("Field:", v.Type().Field(i).Name)
+				if v.Field(i).CanSet() {
+					v.Field(i).Set(reflect.ValueOf(field).Elem())
+				}
 				if err != nil {
 					return err
 				}

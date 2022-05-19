@@ -1,10 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"sort"
 
 	"github.com/Gurvan/melee-data-tools/binread"
+	. "github.com/Gurvan/melee-data-tools/common"
 )
 
 type Version [4]byte
@@ -27,6 +30,59 @@ func (h *Header) GetStringsOffset() *Addr {
 	return h.RelocationOffset.Add(4*h.RelocationCount + 8*(h.RootCount+h.RefCount))
 }
 
+type Relocation map[Addr]uint32
+
+// func ReadRelocation(r binstruct.Reader, offset, count int64) (Relocation, error) {
+func (t *Relocation) BinRead(r *binread.Reader, args ...Args) error {
+	reloc := make(map[Addr]uint32)
+
+	var offset Addr
+	var count uint32
+
+	for _, args := range args {
+		var ok bool
+		if offset, ok = args["offset"].(Addr); !ok {
+			return errors.New("Offset required for parsing relocation table.")
+		}
+		if count, ok = args["count"].(uint32); !ok {
+			return errors.New("Count required for parsing relocation table.")
+		}
+	}
+
+	_, err := r.Seek(offset.ToSeek(), io.SeekStart)
+	if err != nil {
+		return err
+	}
+
+	offsets := make([]Addr, count)
+
+	var c uint32 = 0
+	for {
+		var v Ptr[Addr]
+		err = r.Decode(&v)
+		if err != nil {
+			return err
+		}
+		offsets[c] = v.Value
+		c++
+		if c >= count {
+			break
+		}
+	}
+
+	sort.Slice(offsets, func(i, j int) bool { return offsets[i] < offsets[j] })
+	for i, offset := range offsets {
+		if i == len(offsets)-1 {
+			reloc[offset] = 0
+			break
+		}
+		reloc[offset] = uint32(offsets[i+1] - offset)
+	}
+
+	*t = reloc
+	return nil
+}
+
 type NamedOffset struct {
 	Offset Addr
 	Name   NullTerminatedString
@@ -34,11 +90,17 @@ type NamedOffset struct {
 
 var _ binread.BinReader = (*NamedOffset)(nil)
 
-func (n *NamedOffset) BinRead(r *binread.Reader, args ...interface{}) error {
+func (n *NamedOffset) BinRead(r *binread.Reader, args ...Args) error {
 	var stringsOffset uint32
-	if offset, ok := args[0].(uint32); ok {
-		stringsOffset = offset
+
+	for _, args := range args {
+		if offset, ok := args["offset"].(uint32); ok {
+			stringsOffset = offset
+		}
 	}
+	// if offset, ok := args[0].(uint32); ok {
+	//         stringsOffset = offset
+	// }
 
 	before := uint32(r.CurrentPosition())
 
@@ -54,7 +116,9 @@ func (n *NamedOffset) BinRead(r *binread.Reader, args ...interface{}) error {
 	}
 
 	var namePtr Ptr[NullTerminatedString]
-	err = r.Decode(&namePtr, Addr(stringOffset+before+stringsOffset), io.SeekStart)
+	ptrArgs := Args{"offset": Addr(stringOffset + before + stringsOffset), "seekfrom": io.SeekStart}
+	err = r.Decode(&namePtr, ptrArgs)
+	// err = r.Decode(&namePtr, Addr(stringOffset+before+stringsOffset), io.SeekStart)
 	if err != nil {
 		return err
 	}
@@ -66,7 +130,7 @@ type Root = NamedOffset
 type Ref = NamedOffset
 
 type Footer struct {
-	Relocation Addr
+	Relocation Relocation
 	Roots      []Root
 	Refs       []Ref
 }
@@ -76,7 +140,7 @@ type Descriptor struct {
 	Footer
 }
 
-func (d *Descriptor) BinRead(r *binread.Reader, _ ...interface{}) error {
+func (d *Descriptor) BinRead(r *binread.Reader, _ ...Args) error {
 	err := r.Decode(&d.Header)
 	if err != nil {
 		return err
@@ -87,25 +151,48 @@ func (d *Descriptor) BinRead(r *binread.Reader, _ ...interface{}) error {
 		return err
 	}
 
-	refRootsOffset := 8 * (d.RootCount + d.RefCount)
+	rootRefOffset := 8 * (d.RootCount + d.RefCount)
 
-	reloc := make([]Addr, d.RelocationCount)
-	err = r.Decode(&reloc)
+	// reloc := make([]Addr, d.RelocationCount)
+	// err = r.Decode(&reloc)
+	relocArgs := Args{"offset": d.RelocationOffset, "count": d.RelocationCount}
+	err = r.Decode(&d.Relocation, relocArgs)
 	if err != nil {
 		return err
 	}
 
+	// _, _ = r.Seek(int64(4*d.RelocationCount), io.SeekCurrent)
+
+	rootRefArgs := Args{"offset": rootRefOffset}
+
 	d.Roots = make([]Root, d.RootCount)
-	err = r.Decode(&d.Roots, refRootsOffset)
+	err = r.Decode(&d.Roots, rootRefArgs)
 	if err != nil {
 		return err
 	}
 
 	d.Refs = make([]Ref, d.RefCount)
-	err = r.Decode(&d.Refs, refRootsOffset)
+	err = r.Decode(&d.Refs, rootRefArgs)
 	if err != nil {
 		return err
 	}
 
+	err = d.GoToFirstRoot(r)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *Descriptor) GoToFirstRoot(r *binread.Reader) error {
+	if len(d.Roots) == 0 {
+		return errors.New("No roots in struct")
+	}
+	firstRootOffset := d.Roots[0].Offset
+	_, err := r.Seek(firstRootOffset.ToSeek(), io.SeekStart)
+	if err != nil {
+		return err
+	}
 	return nil
 }

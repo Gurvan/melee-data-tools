@@ -1,4 +1,4 @@
-package main
+package common
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 
 	"github.com/Gurvan/melee-data-tools/binread"
 )
+
+type Args = binread.Args
 
 type Addr uint32
 
@@ -15,7 +17,7 @@ func (p Addr) String() string {
 	return fmt.Sprintf("0x%X", uint32(p))
 }
 
-func (p *Addr) BinRead(r *binread.Reader, _ ...interface{}) error {
+func (p *Addr) BinRead(r *binread.Reader, _ ...Args) error {
 	var v uint32
 	err := r.Decode(&v)
 	if err != nil {
@@ -38,7 +40,7 @@ type NullTerminatedString string
 
 var _ binread.BinReader = (*NullTerminatedString)(nil)
 
-func (s *NullTerminatedString) BinRead(r *binread.Reader, _ ...interface{}) error {
+func (s *NullTerminatedString) BinRead(r *binread.Reader, _ ...Args) error {
 	bs := make([]byte, 0)
 	for {
 		var b byte
@@ -64,18 +66,27 @@ type Ptr[T any] struct {
 
 var _ binread.BinReader = (*Ptr[uint32])(nil)
 
-func (p *Ptr[T]) BinRead(r *binread.Reader, args ...interface{}) error {
-	fmt.Println("Args:", args)
-	fmt.Println(args[0].(Addr))
+func (p *Ptr[T]) BinRead(r *binread.Reader, args ...Args) error {
 	seekFrom := io.SeekStart
-	if offset, ok := args[0].(Addr); ok {
-		p.Offset = offset
-		fmt.Println(offset)
-		if seek, ok := args[1].(int); ok {
-			seekFrom = seek
-			fmt.Println("SeekFrom:", seek)
+	ok := false
+	for _, args := range args {
+		if p.Offset, ok = args["offset"].(Addr); ok {
+			if seek, ok := args["seekfrom"].(int); ok {
+				seekFrom = seek
+			}
+			break
 		}
-	} else {
+
+	}
+	// for _, arg := range args {
+	//         if p.Offset, ok = arg.(Addr); ok {
+	//                 if seek, ok := args[1].(int); ok {
+	//                         seekFrom = seek
+	//                 }
+	//                 break
+	//         }
+	// }
+	if !ok {
 		err := r.Decode(&p.Offset)
 		if err != nil {
 			return err
