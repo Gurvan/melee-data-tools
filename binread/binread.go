@@ -31,6 +31,19 @@ func (r *Reader) CurrentPosition() int64 {
 	return pos
 }
 
+func (r *Reader) Peek(n int) ([]byte, error) {
+	before := r.CurrentPosition()
+
+	b := make([]byte, n)
+	// rn, b, err := r.ReadBytes(n)
+	err := r.Decode(&b)
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.Seek(before, io.SeekStart)
+	return b, err
+}
+
 type BinReader interface {
 	BinRead(*Reader, ...Args) error
 }

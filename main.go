@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/Gurvan/melee-data-tools/binread"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/Gurvan/melee-data-tools/fighter"
 )
 
 func PrettyString(obj interface{}) string {
@@ -34,8 +34,30 @@ func main() {
 	}
 
 	// fmt.Printf("%#+v\n", h)
-	spew.Dump(h.Data.ActionTable.Value)
+	// spew.Dump(h.Data.ActionTable.Value)
 
-	fmt.Println(len(h.Data.ActionTable.Value))
+	// fmt.Println(len(h.Data.ActionTable.Value))
+	// printSubActions(h.Data.ActionTable.Value)
+
+}
+
+func printSubActions(actionTable fighter.ActionTable) {
+	for _, action := range actionTable {
+		switch action.Name.Value {
+		// case "PlyCaptain5K_Share_ACTION_AttackAirHi_figatree", "PlyCaptain5K_Share_ACTION_RunBrake_figatree":
+		default:
+			if len(action.Name.Value) > 36 {
+				fmt.Printf("%s:\n", action.Name.Value[26:len(action.Name.Value)-9])
+			} else {
+				fmt.Println("NoName:")
+			}
+			for _, subac := range action.Subactions.Value {
+				// fmt.Printf("\t%T\n", subac)
+				// fmt.Printf("\t%#v\n", subac)
+				fmt.Printf("\t%s\n", fighter.SubActionString(subac))
+			}
+			// fmt.Println()
+		}
+	}
 
 }

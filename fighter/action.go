@@ -1,6 +1,9 @@
 package fighter
 
 import (
+	"fmt"
+	"io"
+
 	"github.com/Gurvan/melee-data-tools/binread"
 	. "github.com/Gurvan/melee-data-tools/common"
 )
@@ -34,7 +37,53 @@ type Action struct {
 	Name            Ptr[NullTerminatedString]
 	AnimationOffset Addr
 	AnimationSize   uint32
-	Subaction       Ptr[uint32] // Ptr[[]SubAction]
+	Subactions      Ptr[[]SubAction] // Ptr[[]SubAction]
 	Flags           uint32
 	_               [4]byte
+}
+
+func (a *Action) AfterParse(r *binread.Reader, _ ...Args) error {
+	fmt.Println(a.Name.Value)
+	subactions := make([]SubAction, 0)
+
+	before := r.CurrentPosition()
+
+	_, err := r.Seek(a.Subactions.Offset.ToSeek(), io.SeekStart)
+	if err != nil {
+		return err
+	}
+
+subactionloop:
+	for {
+		subaction, err := GetSubActionType(r)
+		if err != nil {
+			if _, ok := err.(*SubActionNotImplemented); ok {
+				var x [4]byte
+				r.Decode(&x)
+				// log.Println(err)
+				continue
+			} else {
+				return err
+			}
+		}
+
+		err = DecodeSubAction(r, subaction)
+		if err != nil {
+			return err
+		}
+
+		switch subaction.(type) {
+		case EndOfScript:
+			fmt.Printf("%T\n", subaction)
+			break subactionloop
+		default:
+			fmt.Printf("%T\n", subaction)
+		}
+		subactions = append(subactions, subaction)
+	}
+
+	// subactions = append(subactions, subaction)
+	a.Subactions.Value = subactions
+	_, err = r.Seek(before, io.SeekStart)
+	return err
 }
