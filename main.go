@@ -37,7 +37,7 @@ func main() {
 	// spew.Dump(h.Data.ActionTable.Value)
 
 	// fmt.Println(len(h.Data.ActionTable.Value))
-	// printSubActions(h.Data.ActionTable.Value)
+	printSubActions(h.Data.ActionTable.Value)
 
 }
 

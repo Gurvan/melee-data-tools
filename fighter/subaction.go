@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 
 	"github.com/Gurvan/melee-data-tools/binread"
@@ -98,7 +97,7 @@ func subactionTypeSwitch(i uint8) (SubAction, error) {
 func GetSubActionType(r *binread.Reader) (SubAction, error) {
 	b, err := r.Peek(1)
 	if err != nil {
-		return emptySubAction{}, err
+		return &emptySubAction{}, err
 	}
 	return subactionTypeSwitch(uint8(b[0]) >> 2)
 }
@@ -144,14 +143,20 @@ func JoinBits(bits []Bit, padto int) []byte {
 	return byts
 }
 
-func NumBits(s SubAction) int {
-	v := reflect.ValueOf(s)
-	t := reflect.TypeOf(s)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-		t = t.Elem()
+func NumBits(s SubAction) (int, error) {
+	// v := reflect.ValueOf(s)
+	// t := reflect.TypeOf(s)
+	// if v.Kind() == reflect.Ptr {
+	//         v = v.Elem()
+	//         t = t.Elem()
+	// }
+	pv := reflect.ValueOf(s)
+	if pv.Kind() != reflect.Ptr {
+		return 0, errors.New("BitRead should be called with a pointer to a SubAction.")
 	}
 
+	// v := pv.Elem()
+	t := reflect.TypeOf(s).Elem()
 	var totalbits int = 6
 	var numbits int
 	for i := 0; i < t.NumField(); i++ {
@@ -168,55 +173,40 @@ func NumBits(s SubAction) int {
 			// }
 		}
 	}
-	return totalbits
+	return totalbits, nil
 }
 
 func BitRead(bits []Bit, s SubAction) error {
 	v := reflect.ValueOf(s)
-	// pt := reflect.TypeOf(s)
-	// if pv.Kind() != reflect.Ptr {
-	//         return errors.New("BitRead should be called with a pointer to a SubAction.")
-	//         // v = v.Elem()
-	//         // t = t.Elem()
-	// }
-	if v.Kind() == reflect.Ptr {
-		v = reflect.Indirect(v)
+	if v.Kind() != reflect.Ptr {
+		return errors.New("BitRead should be called with a pointer to a SubAction.")
 	}
-	// v := pv.Elem()
-	// t := pt.Elem()
-	if v.Kind() != reflect.Struct {
-		log.Fatal("unexpected type")
-	}
-	t := v.Type()
-	fmt.Println(v)
+
+	v = v.Elem()
+	t := reflect.TypeOf(s).Elem()
 
 	var p int = 6
 	var numbits int
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-		if field.Type.Kind() == reflect.Struct {
+		if field.Anonymous {
 			continue
 		}
+		// fmt.Printf("%#v\n", field)
 		if bit, ok := field.Tag.Lookup("bit"); ok {
 			fmt.Sscanf(bit, "%d", &numbits)
 			// fmt.Println(field.Name, bit, numbits)
 			switch t.Field(i).Type.Kind() {
 			case reflect.Uint32:
 				byts := JoinBits(bits[p:p+numbits], 32)
-				fmt.Println(bits, bits[p:p+numbits], p, p+numbits, byts)
+				// fmt.Println(bits, bits[p:p+numbits], p, p+numbits, byts)
 				r := bytes.NewReader(byts)
 				var value uint32
 				err := binary.Read(r, binary.BigEndian, &value)
 				if err != nil {
 					return err
 				}
-				fmt.Printf("Type %T, Value: %v\n", value, value)
-				fmt.Println(t.Field(i).Name)
-				if t.Field(i).Name != "_" {
-					v.Field(i).Set(reflect.ValueOf(value))
-				}
 				if v.Field(i).CanSet() {
-					fmt.Println("Setting:", value)
 					v.Field(i).Set(reflect.ValueOf(value))
 				}
 			default:
@@ -231,14 +221,18 @@ func BitRead(bits []Bit, s SubAction) error {
 
 func DecodeSubAction(r *binread.Reader, s SubAction) error {
 	// fmt.Printf("%#+v\n", s)
-	numbits := NumBits(s)
+	numbits, err := NumBits(s)
+	if err != nil {
+		return err
+	}
+
 	if numbits%32 != 0 {
 		return errors.New(fmt.Sprintf("SubAction total bit number +6 should be a multiple of 32. Numbits+6=%d", numbits))
 	}
 
 	byts := make([]byte, numbits/8)
 	// fmt.Println(numbits/8, r.CurrentPosition())
-	err := r.Decode(&byts)
+	err = r.Decode(&byts)
 	if err != nil {
 		return err
 	}

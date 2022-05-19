@@ -1,7 +1,6 @@
 package fighter
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/Gurvan/melee-data-tools/binread"
@@ -43,7 +42,7 @@ type Action struct {
 }
 
 func (a *Action) AfterParse(r *binread.Reader, _ ...Args) error {
-	fmt.Println(a.Name.Value)
+	// fmt.Println(a.Name.Value)
 	subactions := make([]SubAction, 0)
 
 	before := r.CurrentPosition()
@@ -73,11 +72,12 @@ subactionloop:
 		}
 
 		switch subaction.(type) {
-		case EndOfScript:
-			fmt.Printf("%T\n", subaction)
+		case *EndOfScript:
+			// fmt.Printf("%T\n", subaction)
+			// fmt.Println("BREAK")
 			break subactionloop
 		default:
-			fmt.Printf("%T\n", subaction)
+			// fmt.Printf("%T\n", subaction)
 		}
 		subactions = append(subactions, subaction)
 	}
