@@ -15,6 +15,26 @@ func PrettyString(obj interface{}) string {
 	return string(bytes)
 }
 
+func printSubActions(actionTable fighter.ActionTable) {
+	for _, action := range actionTable {
+		switch action.Name.Value {
+		// case "PlyCaptain5K_Share_ACTION_AttackAirHi_figatree", "PlyCaptain5K_Share_ACTION_RunBrake_figatree":
+		default:
+			if len(action.Name.Value) > 36 {
+				fmt.Printf("%s:\n", action.Name.Value[26:len(action.Name.Value)-9])
+			} else {
+				fmt.Println("NoName:")
+			}
+			for _, subac := range action.Subactions.Value {
+				// fmt.Printf("\t%T\n", subac)
+				// fmt.Printf("\t%#v\n", subac)
+				fmt.Printf("\t%s\n", fighter.SubActionString(subac))
+			}
+			// fmt.Println()
+		}
+	}
+}
+
 func main() {
 	file, err := os.Open("file.dat")
 	// file, err := os.Open("file2.dat")
@@ -38,26 +58,4 @@ func main() {
 
 	// fmt.Println(len(h.Data.ActionTable.Value))
 	printSubActions(h.Data.ActionTable.Value)
-
-}
-
-func printSubActions(actionTable fighter.ActionTable) {
-	for _, action := range actionTable {
-		switch action.Name.Value {
-		// case "PlyCaptain5K_Share_ACTION_AttackAirHi_figatree", "PlyCaptain5K_Share_ACTION_RunBrake_figatree":
-		default:
-			if len(action.Name.Value) > 36 {
-				fmt.Printf("%s:\n", action.Name.Value[26:len(action.Name.Value)-9])
-			} else {
-				fmt.Println("NoName:")
-			}
-			for _, subac := range action.Subactions.Value {
-				// fmt.Printf("\t%T\n", subac)
-				// fmt.Printf("\t%#v\n", subac)
-				fmt.Printf("\t%s\n", fighter.SubActionString(subac))
-			}
-			// fmt.Println()
-		}
-	}
-
 }

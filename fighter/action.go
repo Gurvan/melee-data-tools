@@ -17,8 +17,12 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 		var ok bool
 		if count, ok = args["actionCount"].(int); ok {
 			break
+		} else {
+			return nil
 		}
 	}
+
+	// count = 10
 
 	actions := make([]Action, count)
 	err := r.Decode(&actions)
@@ -71,15 +75,15 @@ subactionloop:
 			return err
 		}
 
+		subactions = append(subactions, subaction)
 		switch subaction.(type) {
-		case *EndOfScript:
+		case *EndOfScript, *GoTo, *SubroutineReturn:
 			// fmt.Printf("%T\n", subaction)
 			// fmt.Println("BREAK")
 			break subactionloop
 		default:
 			// fmt.Printf("%T\n", subaction)
 		}
-		subactions = append(subactions, subaction)
 	}
 
 	// subactions = append(subactions, subaction)
