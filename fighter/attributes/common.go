@@ -7,7 +7,7 @@ type Common struct {
 	WalkSpeedFixed                  float32
 	WalkSpeedMax                    float32
 	WalkAnimSpeedSlow               float32
-	WalkAnimSpeeMid                 float32
+	WalkAnimSpeedMid                float32
 	WalkAnimSpeedFast               float32
 	Traction                        float32
 	DashSpeedStart                  float32
