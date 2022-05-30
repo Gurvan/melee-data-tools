@@ -6,6 +6,7 @@ import (
 
 	"github.com/Gurvan/melee-data-tools/binread"
 	. "github.com/Gurvan/melee-data-tools/common"
+	"github.com/Gurvan/melee-data-tools/descriptor"
 	"github.com/Gurvan/melee-data-tools/fighter"
 	"github.com/Gurvan/melee-data-tools/fighter/attributes"
 )
@@ -29,7 +30,7 @@ type FighterData struct {
 }
 
 type FighterFile struct {
-	Desc Descriptor
+	Desc descriptor.Descriptor
 	Data FighterData
 }
 

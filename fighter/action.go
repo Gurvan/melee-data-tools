@@ -40,7 +40,7 @@ type Action struct {
 	Name            Ptr[NullTerminatedString]
 	AnimationOffset Addr
 	AnimationSize   uint32
-	Subactions      Ptr[[]SubAction] // Ptr[[]SubAction]
+	Subactions      Ptr[[]SubAction]
 	Flags           uint32
 	_               [4]byte
 }

@@ -10,6 +10,8 @@ import (
 
 const debug = false
 
+// const debug = true
+
 func printlnDebug(x ...interface{}) {
 	if debug {
 		fmt.Println(x...)
@@ -42,6 +44,10 @@ func (r *Reader) Peek(n int) ([]byte, error) {
 	}
 	_, err = r.Seek(before, io.SeekStart)
 	return b, err
+}
+
+func (r *Reader) ReadAt(offset int64) error {
+	return nil
 }
 
 type BinReader interface {

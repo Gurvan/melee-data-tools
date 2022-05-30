@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 
 	"github.com/Gurvan/melee-data-tools/binread"
 	"github.com/Gurvan/melee-data-tools/fighter"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func PrettyString(obj interface{}) string {
@@ -35,9 +37,10 @@ func printSubActions(actionTable fighter.ActionTable) {
 	}
 }
 
+var animNameRegex = regexp.MustCompile(`.*_([a-zA-Z0-9]+)_figatree`)
+
 func main() {
 	file, err := os.Open("file.dat")
-	// file, err := os.Open("file2.dat")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,8 +57,38 @@ func main() {
 	}
 
 	// fmt.Printf("%#+v\n", h)
+	spew.Dump(h.Desc.Header)
 	// spew.Dump(h.Data.ActionTable.Value)
+	actions := h.Data.ActionTable.Value
+	for _, action := range actions {
+		fmt.Println(action.AnimationOffset)
+	}
 
 	// fmt.Println(len(h.Data.ActionTable.Value))
-	printSubActions(h.Data.ActionTable.Value)
+	// printSubActions(h.Data.ActionTable.Value)
+
+	// ANIMATION
+	// fileAnim, err := os.Open("file_anim.dat")
+	// if err != nil {
+	//         log.Fatal(err)
+	// }
+
+	// reader = binread.NewReader(fileAnim)
+	// reader.Seek(actions[0].AnimationOffset.ToSeek(), io.SeekStart)
+
+	// filesData, err := fighter.SplitAnimationFile(reader)
+	// if err != nil {
+	//         log.Fatal(err)
+	// }
+	// fmt.Println(len(filesData))
+	// for _, data := range filesData {
+	//         r := binread.NewReader(bytes.NewReader(data))
+	//         d := descriptor.Descriptor{}
+	//         err := r.Decode(&d)
+	//         if err != nil {
+	//                 log.Fatal(err)
+	//         }
+	//         // fmt.Println(d.Footer.Roots[0].Name, animNameRegex.FindStringSubmatch(string(d.Footer.Roots[0].Name))[1]) // .MatchString(string(d.Footer.Roots[0].Name)))
+	//         fmt.Println(animNameRegex.FindStringSubmatch(string(d.Footer.Roots[0].Name))[1])
+	// }
 }
