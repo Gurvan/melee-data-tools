@@ -61,11 +61,11 @@ func main() {
 	// spew.Dump(h.Data.ActionTable.Value)
 	actions := h.Data.ActionTable.Value
 	for _, action := range actions {
-		fmt.Println(action.AnimationOffset)
+		fmt.Println(action.AnimationOffset, action.Name, action.Subactions.Value)
 	}
 
 	// fmt.Println(len(h.Data.ActionTable.Value))
-	// printSubActions(h.Data.ActionTable.Value)
+	printSubActions(h.Data.ActionTable.Value)
 
 	// ANIMATION
 	// fileAnim, err := os.Open("file_anim.dat")

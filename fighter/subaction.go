@@ -117,7 +117,7 @@ type Unknown0x09 struct {
 
 // 0x0A
 type GraphicEffect struct {
-	BoneId               uint32 `bit:"32"`
+	BoneId               uint32 `bit:"8"`
 	UseCommonBoneIDs     bool   `bit:"1"`
 	DestroyOnStateChange bool   `bit:"1"`
 	_                    uint32 `bit:"16"`
@@ -129,7 +129,7 @@ type GraphicEffect struct {
 	RangeZ               int32  `bit:"16"`
 	RangeY               int32  `bit:"16"`
 	RangeX               int32  `bit:"16"`
-	_                    uint32 `bit:"8"`
+	// _                    uint32 `bit:"8"`
 }
 
 // 0x0B
@@ -330,15 +330,15 @@ type PseudoRandomSoundEffect struct {
 // 0x27
 type Unknown0x27 struct {
 	_     uint32 `bit:"26"`
-	_     uint32 `bit:"32"`
-	_     uint32 `bit:"32"`
-	_     uint32 `bit:"32"`
+	_     uint32 `bit:"8"`
+	_     uint32 `bit:"8"`
+	_     uint32 `bit:"8"`
 	SFXID uint32 `bit:"32"`
 	_     uint32 `bit:"32"`
-	_     uint32 `bit:"32"`
-	_     uint32 `bit:"32"`
-	_     uint32 `bit:"32"`
-	_     uint32 `bit:"32"`
+	_     uint32 `bit:"8"`
+	_     uint32 `bit:"8"`
+	_     uint32 `bit:"8"`
+	_     uint32 `bit:"8"`
 }
 
 // 0x28
@@ -445,7 +445,7 @@ type StartSmashCharge struct {
 	ChargeFrames   uint32 `bit:"8"`
 	CargeRate      uint32 `bit:"16"`
 	ColorAnimation uint32 `bit:"8"`
-	_              uint32 `bit:"32"`
+	_              uint32 `bit:"24"`
 }
 
 // 0x39
@@ -731,9 +731,9 @@ func DecodeSubAction(r *binread.Reader, s SubAction) error {
 		return err
 	}
 
-	if numbits%32 != 0 {
-		return errors.New(fmt.Sprintf("SubAction total bit number +6 should be a multiple of 32. SubAction: %T | Numbits+6=%d", s, numbits))
-	}
+	// if numbits%32 != 0 {
+	//         return errors.New(fmt.Sprintf("SubAction total bit number +6 should be a multiple of 32. SubAction: %T | Numbits+6=%d", s, numbits))
+	// }
 
 	byts := make([]byte, numbits/8)
 	err = r.Decode(&byts)
