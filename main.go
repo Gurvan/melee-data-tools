@@ -21,7 +21,8 @@ func printSubActions(actionTable fighter.ActionTable) {
 	for _, action := range actionTable {
 		switch action.Name.Value {
 		// case "PlyCaptain5K_Share_ACTION_AttackAirHi_figatree", "PlyCaptain5K_Share_ACTION_RunBrake_figatree":
-		default:
+		case "PlyCaptain5K_Share_ACTION_ThrowF_figatree":
+			// default:
 			if len(action.Name.Value) > 36 {
 				fmt.Printf("%s:\n", action.Name.Value[26:len(action.Name.Value)-9])
 			} else {
@@ -58,14 +59,17 @@ func main() {
 
 	// fmt.Printf("%#+v\n", h)
 	spew.Dump(h.Desc.Header)
+	spew.Dump(h.Data.AttributesSpecial)
+	// spew.Dump(h.Data.ECB)
+	// spew.Dump(h.Data.JostleBox)
 	// spew.Dump(h.Data.ActionTable.Value)
-	actions := h.Data.ActionTable.Value
-	for _, action := range actions {
-		fmt.Println(action.AnimationOffset, action.Name, action.Subactions.Value)
-	}
+	// actions := h.Data.ActionTable.Value
+	// for _, action := range actions {
+	//         fmt.Println(action.AnimationOffset, action.Name, action.Subactions.Value)
+	// }
 
 	// fmt.Println(len(h.Data.ActionTable.Value))
-	printSubActions(h.Data.ActionTable.Value)
+	// printSubActions(h.Data.ActionTable.Value)
 
 	// ANIMATION
 	// fileAnim, err := os.Open("file_anim.dat")

@@ -19,7 +19,7 @@ type FighterData struct {
 	_                 uint32
 	_                 [32]byte
 	// Hurtboxes uint32
-	_   uint32
+	// _   uint32
 	_   [16]byte
 	ECB Ptr[fighter.ECB]
 	// ArticlePointerPtr uint32
