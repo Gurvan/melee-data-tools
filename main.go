@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/Gurvan/melee-data-tools/binread"
 	"github.com/Gurvan/melee-data-tools/fighter"
@@ -18,19 +19,36 @@ func PrettyString(obj interface{}) string {
 }
 
 func printSubActions(actionTable fighter.ActionTable) {
-	for _, action := range actionTable {
+	fmt.Println(len(actionTable))
+	for index, action := range actionTable {
 		switch action.Name.Value {
 		// case "PlyCaptain5K_Share_ACTION_AttackAirHi_figatree", "PlyCaptain5K_Share_ACTION_RunBrake_figatree":
-		case "PlyCaptain5K_Share_ACTION_ThrowF_figatree":
-			// default:
-			if len(action.Name.Value) > 36 {
+		// case "PlyCaptain5K_Share_ACTION_Attack100Loop_figatree":
+		// case "":
+		default:
+			// if len(action.Name.Value) > 36 {
+			if strings.Contains(string(action.Name.Value), "PlyCaptain5K") {
 				fmt.Printf("%s:\n", action.Name.Value[26:len(action.Name.Value)-9])
-			} else {
+			} else if strings.Contains(string(action.Name.Value), "PlyTaro") {
+				fmt.Printf("%s:\n", action.Name.Value[21:len(action.Name.Value)-9])
+			} else if len(action.Name.Value) == 0 {
+				// fmt.Println("Unnamed" + action.ActionOffset.String())
 				fmt.Println("NoName:")
+			} else {
+				fmt.Println(action.Name.Value)
 			}
+			fmt.Println(index)
+			// fmt.Printf("\t0x%X\n", action.ActionOffset)
 			for _, subac := range action.Subactions.Value {
-				// fmt.Printf("\t%T\n", subac)
-				// fmt.Printf("\t%#v\n", subac)
+				// v := reflect.ValueOf(subac)
+				// t := reflect.TypeOf(subac)
+				// if v.Kind() == reflect.Ptr {
+				//         v = v.Elem()
+				//         t = t.Elem()
+				// }
+				// if t.Name() == "Subroutine" {
+				//         fmt.Printf("\t%#v\n", subac)
+				// }
 				fmt.Printf("\t%s\n", fighter.SubActionString(subac))
 			}
 			// fmt.Println()
@@ -59,7 +77,8 @@ func main() {
 
 	// fmt.Printf("%#+v\n", h)
 	spew.Dump(h.Desc.Header)
-	spew.Dump(h.Data.AttributesSpecial)
+	// spew.Dump(h.Desc.Relocation)
+	// spew.Dump(h.Data.AttributesSpecial)
 	// spew.Dump(h.Data.ECB)
 	// spew.Dump(h.Data.JostleBox)
 	// spew.Dump(h.Data.ActionTable.Value)
@@ -69,7 +88,7 @@ func main() {
 	// }
 
 	// fmt.Println(len(h.Data.ActionTable.Value))
-	// printSubActions(h.Data.ActionTable.Value)
+	printSubActions(h.Data.ActionTable.Value)
 
 	// ANIMATION
 	// fileAnim, err := os.Open("file_anim.dat")

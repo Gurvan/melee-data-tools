@@ -14,7 +14,7 @@ type Addr uint32
 var _ binread.BinReader = (*Addr)(nil)
 
 func (p Addr) String() string {
-	return fmt.Sprintf("0x%X", uint32(p))
+	return fmt.Sprintf("0x%1X", uint32(p))
 }
 
 func (p *Addr) BinRead(r *binread.Reader, _ ...Args) error {

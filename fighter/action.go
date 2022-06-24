@@ -25,10 +25,78 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 	// count = 10
 
 	actions := make([]Action, count)
-	err := r.Decode(&actions)
-	if err != nil {
-		return err
+	// unnamedActionsMap := make(map[Addr]*Action)
+	// err := r.Decode(&actions)
+	// if err != nil {
+	//         return err
+	// }
+
+	// beforeActions := r.CurrentPosition()
+	// var firstUnnamed int64 = 0
+	for i := 0; i < count; i++ {
+		before := r.CurrentPosition()
+		err := r.Decode(&actions[i])
+		if err != nil {
+			return err
+		}
+		// actions[i].ActionOffset = Addr(uint32(before) - uint32(beforeActions))
+		// actions[i].ActionOffset = actions[i].Subactions.Offset
+		actions[i].ActionOffset = Addr(uint32(before))
+		// if actions[i].Name.Value == "" {
+		// if firstUnnamed == 0 {
+		//         firstUnnamed = r.CurrentPosition()
+		// }
+		// unnamedActionsMap[actions[i].ActionOffset] = &actions[i]
+		// }
+		// fmt.Printf("%s | %s | 0x%X\n", actions[i].Name, actions[i].ActionOffset, before)
 	}
+
+	// fmt.Println(unnamedActionsMap)
+	// fmt.Println("First: ", Addr(firstUnnamed))
+	// for addr := range unnamedActionsMap {
+	//         fmt.Println(addr)
+	// }
+
+	// fmt.Println("#########################")
+
+	newActionsNames := make(map[string]bool)
+	for _, action := range actions {
+		// fmt.Println(action.Name.Value)
+		for _, subaction := range action.Subactions.Value {
+			switch s := subaction.(type) {
+			case *Subroutine:
+				addr := Addr(s.Pointer)
+				name := "Subroutine" + addr.String()
+				if _, ok := newActionsNames[name]; ok {
+					continue
+				}
+				newAction := Action{}
+				newAction.Name = Ptr[NullTerminatedString]{Value: NullTerminatedString(name)}
+				newActionsNames[name] = true
+				newAction.Subactions.Offset = addr
+				newAction.AfterParse(r)
+				actions = append(actions, newAction)
+
+				// _, err := r.Seek(int64(s.Pointer+20), io.SeekStart)
+				// if err != nil {
+				//         return err
+				// }
+				// var addr Addr
+				// err = r.Decode(&addr)
+				// if err != nil {
+				//         return err
+				// }
+				// fmt.Println(addr)
+				// if a, ok := unnamedActionsMap[addr]; ok {
+				//         a.Name.Value = common.NullTerminatedString("Subroutine" + addr.String())
+				//         fmt.Println("\t", a.Name.Value)
+				// }
+
+			default:
+			}
+		}
+	}
+
 	*t = actions
 
 	return nil
@@ -42,7 +110,8 @@ type Action struct {
 	AnimationSize   uint32
 	Subactions      Ptr[[]SubAction]
 	Flags           uint32
-	_               [4]byte
+	// _               [4]byte
+	ActionOffset Addr // Conveniently this field is always 0 in the file so it can be replaced by the offset
 }
 
 func (a *Action) AfterParse(r *binread.Reader, _ ...Args) error {
