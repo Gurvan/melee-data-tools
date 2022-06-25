@@ -18,9 +18,9 @@ func (h Position) String() string {
 }
 
 const (
-	Low  Position = 0
-	Mid  Position = 1
-	High Position = 2
+	Low Position = iota
+	Mid
+	High
 )
 
 type Grabbable uint32
@@ -37,6 +37,6 @@ func (g Grabbable) String() string {
 }
 
 const (
-	No  Grabbable = 0
-	Yes Grabbable = 1
+	No Grabbable = iota
+	Yes
 )

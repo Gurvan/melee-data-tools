@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -49,60 +50,56 @@ func printActions(actionTable fighter.ActionTable, printSubactions bool) {
 var animNameRegex = regexp.MustCompile(`.*_([a-zA-Z0-9]+)_figatree`)
 
 func main() {
-	file, err := os.Open("file.dat")
+	fighterFile, err := os.Open("fighter.dat")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer fighterFile.Close()
+	reader := binread.NewReader(fighterFile)
 
-	reader := binread.NewReader(file)
+	fighter := FighterFile{}
 
-	// h := Header{}
-	// h := Descriptor{}
-	h := FighterFile{}
-
-	err = reader.Decode(&h)
+	err = reader.Decode(&fighter)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// fmt.Printf("%#+v\n", h)
-	spew.Dump(h.Desc.Header)
-	// spew.Dump(h.Desc.Relocation)
-	// spew.Dump(h.Data.AttributesSpecial)
-	// spew.Dump(h.Data.ECB)
-	// spew.Dump(h.Data.JostleBox)
-	// spew.Dump(h.Data.Hurtboxes)
-	// spew.Dump(h.Data.ActionTable.Value)
-	// actions := h.Data.ActionTable.Value
-	// for _, action := range actions {
-	//         fmt.Println(action.AnimationOffset, action.Name, action.Subactions.Value)
-	// }
-
-	// fmt.Println(len(h.Data.ActionTable.Value))
-	// printActions(h.Data.ActionTable.Value, true)
+	// spew.Dump(fighter.Desc.Header)
+	// spew.Dump(fighter.Desc.Relocation)
+	// spew.Dump(fighter.Data.AttributesSpecial)
+	// spew.Dump(fighter.Data.ECB)
+	// spew.Dump(fighter.Data.JostleBox)
+	// spew.Dump(fighter.Data.Hurtboxes)
+	// printActions(fighter.Data.ActionTable.Value, true)
 
 	// ANIMATION
-	// fileAnim, err := os.Open("file_anim.dat")
-	// if err != nil {
-	//         log.Fatal(err)
-	// }
+	animationFile, err := os.Open("animation.dat")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer animationFile.Close()
+	reader = binread.NewReader(animationFile)
 
-	// reader = binread.NewReader(fileAnim)
-	// reader.Seek(actions[0].AnimationOffset.ToSeek(), io.SeekStart)
+	animationFilesAsBytes, err := SplitAnimationFile(reader)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// filesData, err := fighter.SplitAnimationFile(reader)
-	// if err != nil {
-	//         log.Fatal(err)
-	// }
-	// fmt.Println(len(filesData))
-	// for _, data := range filesData {
-	//         r := binread.NewReader(bytes.NewReader(data))
-	//         d := descriptor.Descriptor{}
-	//         err := r.Decode(&d)
-	//         if err != nil {
-	//                 log.Fatal(err)
-	//         }
-	//         // fmt.Println(d.Footer.Roots[0].Name, animNameRegex.FindStringSubmatch(string(d.Footer.Roots[0].Name))[1]) // .MatchString(string(d.Footer.Roots[0].Name)))
-	//         fmt.Println(animNameRegex.FindStringSubmatch(string(d.Footer.Roots[0].Name))[1])
-	// }
+	for _, file := range animationFilesAsBytes {
+		reader = binread.NewReader(bytes.NewReader(file))
+		animation := AnimationFile{}
+
+		err = reader.Decode(&animation)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// spew.Dump(animation.Desc.Header)
+		spew.Dump(animation.Desc.Footer.Roots[0].Name)
+		spew.Dump(animation.Data)
+		break
+	}
+
+	fmt.Printf("Num anim files: %d\n", len(animationFilesAsBytes))
 }
