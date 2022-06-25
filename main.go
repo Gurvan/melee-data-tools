@@ -18,7 +18,7 @@ func PrettyString(obj interface{}) string {
 	return string(bytes)
 }
 
-func printSubActions(actionTable fighter.ActionTable) {
+func printActions(actionTable fighter.ActionTable, printSubactions bool) {
 	fmt.Println(len(actionTable))
 	for index, action := range actionTable {
 		switch action.Name.Value {
@@ -26,32 +26,22 @@ func printSubActions(actionTable fighter.ActionTable) {
 		// case "PlyCaptain5K_Share_ACTION_Attack100Loop_figatree":
 		// case "":
 		default:
-			// if len(action.Name.Value) > 36 {
+			fmt.Printf("%d: ", index)
 			if strings.Contains(string(action.Name.Value), "PlyCaptain5K") {
-				fmt.Printf("%s:\n", action.Name.Value[26:len(action.Name.Value)-9])
+				fmt.Printf("%s\n", action.Name.Value[26:len(action.Name.Value)-9])
 			} else if strings.Contains(string(action.Name.Value), "PlyTaro") {
-				fmt.Printf("%s:\n", action.Name.Value[21:len(action.Name.Value)-9])
+				fmt.Printf("%s\n", action.Name.Value[21:len(action.Name.Value)-9])
 			} else if len(action.Name.Value) == 0 {
-				// fmt.Println("Unnamed" + action.ActionOffset.String())
-				fmt.Println("NoName:")
+				fmt.Println("NoName")
 			} else {
-				fmt.Println(action.Name.Value)
+				fmt.Printf("%s\n", action.Name.Value)
 			}
-			fmt.Println(index)
-			// fmt.Printf("\t0x%X\n", action.ActionOffset)
+			if !printSubactions {
+				continue
+			}
 			for _, subac := range action.Subactions.Value {
-				// v := reflect.ValueOf(subac)
-				// t := reflect.TypeOf(subac)
-				// if v.Kind() == reflect.Ptr {
-				//         v = v.Elem()
-				//         t = t.Elem()
-				// }
-				// if t.Name() == "Subroutine" {
-				//         fmt.Printf("\t%#v\n", subac)
-				// }
 				fmt.Printf("\t%s\n", fighter.SubActionString(subac))
 			}
-			// fmt.Println()
 		}
 	}
 }
@@ -88,7 +78,7 @@ func main() {
 	// }
 
 	// fmt.Println(len(h.Data.ActionTable.Value))
-	printSubActions(h.Data.ActionTable.Value)
+	printActions(h.Data.ActionTable.Value, true)
 
 	// ANIMATION
 	// fileAnim, err := os.Open("file_anim.dat")

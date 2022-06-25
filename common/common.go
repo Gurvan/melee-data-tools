@@ -14,7 +14,7 @@ type Addr uint32
 var _ binread.BinReader = (*Addr)(nil)
 
 func (p Addr) String() string {
-	return fmt.Sprintf("0x%1X", uint32(p))
+	return fmt.Sprintf("0x%X", uint32(p))
 }
 
 func (p *Addr) BinRead(r *binread.Reader, _ ...Args) error {
@@ -39,6 +39,10 @@ func (p *Addr) Add(x uint32) *Addr {
 type NullTerminatedString string
 
 var _ binread.BinReader = (*NullTerminatedString)(nil)
+
+func (s NullTerminatedString) String() string {
+	return string(s)
+}
 
 func (s *NullTerminatedString) BinRead(r *binread.Reader, _ ...Args) error {
 	bs := make([]byte, 0)
