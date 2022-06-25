@@ -16,17 +16,14 @@ type FighterData struct {
 	AttributesSpecial Ptr[attributes.Ca]
 	_                 [4]byte
 	ActionTable       Ptr[fighter.ActionTable]
-	_                 uint32
 	_                 [32]byte
-	// Hurtboxes uint32
-	// _   uint32
-	_   [16]byte
-	ECB Ptr[fighter.ECB]
-	// ArticlePointerPtr uint32
-	_         uint32
-	_         [4]byte
-	JostleBox Ptr[fighter.JostleBox]
-	_         [12]byte
+	Hurtboxes         Ptr[fighter.Hurtboxes]
+	_                 [16]byte
+	ECB               Ptr[fighter.ECB]
+	_                 uint32 // ArticlePointerPtr uint32
+	_                 [4]byte
+	JostleBox         Ptr[fighter.JostleBox]
+	_                 [12]byte
 }
 
 type FighterFile struct {

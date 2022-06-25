@@ -71,6 +71,7 @@ func main() {
 	// spew.Dump(h.Data.AttributesSpecial)
 	// spew.Dump(h.Data.ECB)
 	// spew.Dump(h.Data.JostleBox)
+	// spew.Dump(h.Data.Hurtboxes)
 	// spew.Dump(h.Data.ActionTable.Value)
 	// actions := h.Data.ActionTable.Value
 	// for _, action := range actions {
@@ -78,7 +79,7 @@ func main() {
 	// }
 
 	// fmt.Println(len(h.Data.ActionTable.Value))
-	printActions(h.Data.ActionTable.Value, true)
+	// printActions(h.Data.ActionTable.Value, true)
 
 	// ANIMATION
 	// fileAnim, err := os.Open("file_anim.dat")

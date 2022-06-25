@@ -70,7 +70,6 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 
 	var err error
 
-	// fmt.Println("Type:", reflect.TypeOf(data))
 	printlnDebug("Type:", reflect.TypeOf(data))
 
 	interBinReader := reflect.TypeOf((*BinReader)(nil)).Elem()
@@ -82,7 +81,6 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 		v := rv.Elem()
 		switch v.Kind() {
 		case reflect.Struct:
-			// fmt.Println("Struct")
 			printlnDebug("Struct:", v.NumField())
 			for i := 0; i < v.NumField(); i++ {
 				field := reflect.New(v.Field(i).Type()).Interface()
@@ -96,7 +94,6 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 				}
 			}
 		case reflect.Array:
-			// fmt.Println("Array")
 			printlnDebug("Array")
 			for i := 0; i < v.Len(); i++ {
 				item := reflect.New(v.Index(i).Type()).Interface()
@@ -120,7 +117,6 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 			}
 			// return errors.New("Slices are not suppported")
 		default:
-			// fmt.Println("Other Type:", v.Type())
 			printlnDebug("Other Type:", v.Type())
 			err = binary.Read(r, binary.BigEndian, data)
 		}

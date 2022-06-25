@@ -9,75 +9,6 @@ import (
 	. "github.com/Gurvan/melee-data-tools/common"
 )
 
-type ActionTable []Action
-
-var _ binread.BinReader = (*ActionTable)(nil)
-
-func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
-	var count int = 0
-	for _, args := range args {
-		var ok bool
-		if count, ok = args["actionCount"].(int); ok {
-			break
-		} else {
-			return nil
-		}
-	}
-
-	actions := make([]Action, count)
-	for i := 0; i < count; i++ {
-		err := r.Decode(&actions[i])
-		if err != nil {
-			return err
-		}
-	}
-
-	actionsNames := make(map[string]int)
-	for actionIndex, action := range actions {
-		name := action.Name.Value.String()
-
-		// Name unnamed actions
-		if name == "" {
-			name = "Function_" + fmt.Sprint(actionIndex)
-			actions[actionIndex].Name.Value = NullTerminatedString(name)
-		}
-
-		// Increment names for actions with duplicate names
-		if duplicate, ok := actionsNames[name]; ok {
-			actionsNames[name] = duplicate + 1
-			suffix := "_figatree"
-			prefix := strings.TrimSuffix(name, suffix)
-			name = prefix + "_" + fmt.Sprintf("%d", duplicate) + suffix
-			actions[actionIndex].Name.Value = NullTerminatedString(name)
-		} else {
-			actionsNames[name] = 1
-		}
-
-		// Add subroutines to actions slice
-		for _, subaction := range action.Subactions.Value {
-			switch s := subaction.(type) {
-			case *Subroutine:
-				addr := Addr(s.Pointer)
-				name := "Subroutine" + addr.String()
-				if _, ok := actionsNames[name]; ok {
-					continue
-				}
-				newAction := Action{}
-				newAction.Name = Ptr[NullTerminatedString]{Value: NullTerminatedString(name)}
-				actionsNames[name] = 1
-				newAction.Subactions.Offset = addr
-				newAction.AfterParse(r)
-				actions = append(actions, newAction)
-			default:
-			}
-		}
-	}
-
-	*t = actions
-
-	return nil
-}
-
 const ActionSize = 0x18
 
 type Action struct {
@@ -133,4 +64,70 @@ subactionloop:
 	a.Subactions.Value = subactions
 	_, err = r.Seek(before, io.SeekStart)
 	return err
+}
+
+type ActionTable []Action
+
+var _ binread.BinReader = (*ActionTable)(nil)
+
+func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
+	var count int = 0
+	for _, args := range args {
+		var ok bool
+		if count, ok = args["actionCount"].(int); ok {
+			break
+		} else {
+			return nil
+		}
+	}
+
+	actions := make([]Action, count)
+	err := r.Decode(&actions)
+	if err != nil {
+		return err
+	}
+
+	actionsNames := make(map[string]int)
+	for actionIndex, action := range actions {
+		name := action.Name.Value.String()
+
+		// Name unnamed actions
+		if name == "" {
+			name = "Function_" + fmt.Sprint(actionIndex)
+			actions[actionIndex].Name.Value = NullTerminatedString(name)
+		}
+
+		// Increment names for actions with duplicate names
+		if duplicate, ok := actionsNames[name]; ok {
+			actionsNames[name] = duplicate + 1
+			suffix := "_figatree"
+			prefix := strings.TrimSuffix(name, suffix)
+			name = prefix + "_" + fmt.Sprintf("%d", duplicate) + suffix
+			actions[actionIndex].Name.Value = NullTerminatedString(name)
+		} else {
+			actionsNames[name] = 1
+		}
+
+		// Add subroutines to actions slice
+		for _, subaction := range action.Subactions.Value {
+			switch s := subaction.(type) {
+			case *Subroutine:
+				addr := Addr(s.Pointer)
+				name := "Subroutine" + addr.String()
+				if _, ok := actionsNames[name]; ok {
+					continue
+				}
+				newAction := Action{}
+				newAction.Name = Ptr[NullTerminatedString]{Value: NullTerminatedString(name)}
+				actionsNames[name] = 1
+				newAction.Subactions.Offset = addr
+				newAction.AfterParse(r)
+				actions = append(actions, newAction)
+			default:
+			}
+		}
+	}
+
+	*t = actions
+	return nil
 }
