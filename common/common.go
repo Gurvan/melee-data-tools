@@ -17,9 +17,9 @@ func (p Addr) String() string {
 	return fmt.Sprintf("0x%X", uint32(p))
 }
 
-func (p *Addr) BinRead(r *binread.Reader, _ ...Args) error {
+func (p *Addr) BinRead(r *binread.Reader, args ...Args) error {
 	var v uint32
-	err := r.Decode(&v)
+	err := r.Decode(&v, args...)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (p *Ptr[T]) BinRead(r *binread.Reader, args ...Args) error {
 		return err
 	}
 
-	err = r.Decode(&p.Value)
+	err = r.Decode(&p.Value, args...)
 
 	if err != nil {
 		return err

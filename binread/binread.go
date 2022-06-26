@@ -2,7 +2,6 @@ package binread
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -37,7 +36,6 @@ func (r *Reader) Peek(n int) ([]byte, error) {
 	before := r.CurrentPosition()
 
 	b := make([]byte, n)
-	// rn, b, err := r.ReadBytes(n)
 	err := r.Decode(&b)
 	if err != nil {
 		return nil, err
@@ -64,8 +62,20 @@ func (r *Reader) Decode(data any, args ...Args) error {
 
 func unmarshal(r *Reader, data any, args ...Args) error {
 	rv := reflect.ValueOf(data)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
-		return errors.New("Not a pointer")
+
+	var v reflect.Value
+	switch {
+	case rv.Kind() == reflect.Ptr:
+		if rv.IsNil() {
+			return nil
+		}
+		v = rv.Elem()
+	default:
+		v = rv
+	}
+
+	if v.Kind() == reflect.Interface {
+		v = v.Elem()
 	}
 
 	var err error
@@ -74,11 +84,9 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 
 	interBinReader := reflect.TypeOf((*BinReader)(nil)).Elem()
 	if reflect.TypeOf(data).Implements(interBinReader) {
-		// fmt.Println("Reader")
 		printlnDebug("Reader")
 		err = any(data).(BinReader).BinRead(r, args...)
 	} else {
-		v := rv.Elem()
 		switch v.Kind() {
 		case reflect.Struct:
 			printlnDebug("Struct:", v.NumField())
@@ -115,7 +123,6 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 					}
 				}
 			}
-			// return errors.New("Slices are not suppported")
 		default:
 			printlnDebug("Other Type:", v.Type())
 			err = binary.Read(r, binary.BigEndian, data)

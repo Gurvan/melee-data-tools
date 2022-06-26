@@ -1,4 +1,4 @@
-package main
+package mdt
 
 import (
 	"io"
@@ -83,10 +83,7 @@ func (a *AnimationData) AfterParse(r *binread.Reader, _ ...Args) error {
 	return err
 }
 
-type AnimationFile struct {
-	Desc descriptor.Descriptor
-	Data AnimationData
-}
+type AnimationFile = File[AnimationData]
 
 func padTo0x20(n int64) int64 {
 	if n%0x20 == 0 {

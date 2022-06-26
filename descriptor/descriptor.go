@@ -184,3 +184,10 @@ func (d *Descriptor) GoToFirstRoot(r *binread.Reader) error {
 	}
 	return nil
 }
+
+func (d *Descriptor) FirstRootName() (string, error) {
+	if len(d.Roots) == 0 {
+		return "", errors.New("File should have at least 1 root. 0 found.")
+	}
+	return d.Roots[0].Name.String(), nil
+}

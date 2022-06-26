@@ -1,19 +1,14 @@
-package main
+package mdt
 
 import (
-	"fmt"
-	"io"
-
-	"github.com/Gurvan/melee-data-tools/binread"
 	. "github.com/Gurvan/melee-data-tools/common"
-	"github.com/Gurvan/melee-data-tools/descriptor"
 	"github.com/Gurvan/melee-data-tools/fighter"
 	"github.com/Gurvan/melee-data-tools/fighter/attributes"
 )
 
-type FighterData struct {
+type FighterData[AS any] struct {
 	AttributesCommon  Ptr[attributes.Common]
-	AttributesSpecial Ptr[attributes.Ca]
+	AttributesSpecial Ptr[attributes.SpecialAttributes]
 	_                 [4]byte
 	ActionTable       Ptr[fighter.ActionTable]
 	_                 [32]byte
@@ -26,32 +21,4 @@ type FighterData struct {
 	_                 [12]byte
 }
 
-type FighterFile struct {
-	Desc descriptor.Descriptor
-	Data FighterData
-}
-
-func (f *FighterFile) AfterParse(r *binread.Reader, _ ...Args) error {
-	var actionCount int = int(f.Desc.Relocation[f.Data.ActionTable.Offset]) / fighter.ActionSize
-
-	fmt.Println(actionCount)
-
-	before := r.CurrentPosition()
-
-	_, err := r.Seek(f.Data.ActionTable.Offset.ToSeek(), io.SeekStart)
-	if err != nil {
-		return err
-	}
-
-	actionArgs := Args{"actionCount": actionCount}
-	err = r.Decode(&f.Data.ActionTable.Value, actionArgs)
-	if err != nil {
-		return err
-	}
-
-	_, err = r.Seek(before, io.SeekStart)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+type FighterFile = File[FighterData[any]]
