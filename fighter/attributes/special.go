@@ -30,7 +30,6 @@ func fighterSwitch(firstRoot string) (any, error) {
 	default:
 		return any(&UnimplementedSpecialAttributes{}), nil
 	}
-
 }
 
 func (a *SpecialAttributes) BinRead(r *binread.Reader, args ...Args) error {

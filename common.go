@@ -1,6 +1,7 @@
 package mdt
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -68,6 +69,14 @@ func (f *File[T]) ReadFromFile(path string) (T, descriptor.Descriptor, error) {
 	}
 	reader := binread.NewReader(fileData)
 	if err = reader.Decode(f); err != nil {
+		return f.Data, f.Desc, err
+	}
+	return f.Data, f.Desc, nil
+}
+
+func (f *File[T]) ReadFromBytes(fileData []byte) (T, descriptor.Descriptor, error) {
+	reader := binread.NewReader(bytes.NewReader(fileData))
+	if err := reader.Decode(f); err != nil {
 		return f.Data, f.Desc, err
 	}
 	return f.Data, f.Desc, nil

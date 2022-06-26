@@ -92,7 +92,7 @@ func padTo0x20(n int64) int64 {
 	return 0x20 * (n/0x20 + 1)
 }
 
-func SplitAnimationFile(r binread.Reader) ([][]byte, error) {
+func SplitAnimationFile(r binread.Reader) ([][]byte, []int64, error) {
 	filesOffsets := []int64{0}
 	var fs int64 = 0
 	h := descriptor.Header{}
@@ -103,7 +103,7 @@ func SplitAnimationFile(r binread.Reader) ([][]byte, error) {
 			break
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		fs += padTo0x20(int64(h.FileSize))
 		filesOffsets = append(filesOffsets, fs)
@@ -113,7 +113,7 @@ func SplitAnimationFile(r binread.Reader) ([][]byte, error) {
 			break
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -128,5 +128,5 @@ func SplitAnimationFile(r binread.Reader) ([][]byte, error) {
 		offset = i
 	}
 
-	return filesData, nil
+	return filesData, filesOffsets, nil
 }

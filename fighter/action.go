@@ -11,15 +11,43 @@ import (
 	"github.com/Gurvan/melee-data-tools/logger"
 )
 
+type ActionFlags struct {
+	UseAnimBasedPhysics        bool        `bit:"1"`
+	LoopAnimation              bool        `bit:"1"`
+	_                          bool        `bit:"1"`
+	_                          bool        `bit:"1"`
+	DisableDynamics            bool        `bit:"1"`
+	_                          bool        `bit:"1"`
+	TransNAffectedByModelScale bool        `bit:"1"`
+	_                          uint32      `bit:"3"`
+	_                          uint32      `bit:"13"`
+	DisableBlendOnBoneIndex    uint32      `bit:"3"`
+	CharacterID                CharacterID `bit:"6"`
+}
+
+func (f *ActionFlags) BinRead(r *binread.Reader, args ...Args) error {
+	var err error
+
+	byts := make([]byte, 4)
+	err = r.Decode(&byts)
+	if err != nil {
+		return err
+	}
+
+	bits := binread.SplitBytes(byts)
+	err = binread.BitRead(bits, f, 0)
+	return err
+}
+
 const ActionSize = 0x18
 
 type Action struct {
-	Name            Ptr[NullTerminatedString]
-	AnimationOffset Addr
-	AnimationSize   uint32
-	Subactions      Ptr[[]SubAction]
-	Flags           uint32
-	_               [4]byte
+	Name          Ptr[NullTerminatedString]
+	Animation     Ptr[any]
+	AnimationSize uint32
+	Subactions    Ptr[[]SubAction]
+	Flags         ActionFlags
+	_             [4]byte
 }
 
 func (a *Action) AfterParse(r *binread.Reader, _ ...Args) error {

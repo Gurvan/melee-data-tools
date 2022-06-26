@@ -1,9 +1,6 @@
 package fighter
 
 import (
-	"bytes"
-	"encoding/binary"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -21,13 +18,7 @@ func (e *SubActionNotImplemented) Error() string {
 	return fmt.Sprintf("SubAction 0x%X is not implemented", e.Id)
 }
 
-// func (s emptySubAction) IsSubAction() bool {
-//         return true
-// }
-
-type SubAction interface {
-	// IsSubAction() bool
-}
+type SubAction interface{}
 
 var _ SubAction = (*emptySubAction)(nil)
 
@@ -594,139 +585,8 @@ func GetSubActionType(r *binread.Reader) (SubAction, error) {
 	return subactionTypeSwitch(uint8(b[0]) >> 2)
 }
 
-type Bit = byte
-
-func SplitBytes(byts []byte) []Bit {
-	bits := make([]Bit, 0)
-	for _, b := range byts {
-		for i := 0; i < 8; i++ {
-			v := 0
-			if b&(1<<(7-i)) > 0 {
-				v = 1
-			}
-			bits = append(bits, byte(v))
-		}
-	}
-	return bits
-}
-
-func JoinBits(bits []Bit, padto int) []byte {
-	byts := make([]byte, 0)
-	if padto > len(bits) {
-		padding := make([]Bit, padto-len(bits))
-		bits = append(padding, bits...)
-	} else {
-		numbytes := (len(bits)-1)/8 + 1
-		padding := make([]Bit, 8*numbytes-len(bits))
-		bits = append(padding, bits...)
-	}
-
-	var by int
-	for i, b := range bits {
-		i = i % 8
-		if i == 0 {
-			by = 0
-		}
-		by += int(b) * (1 << (7 - i))
-		if i == 7 {
-			byts = append(byts, byte(by))
-		}
-	}
-	return byts
-}
-
-func NumBits(s SubAction) (int, error) {
-	v := reflect.ValueOf(s)
-	if v.Kind() != reflect.Ptr {
-		return 0, errors.New("BitRead should be called with a pointer to a SubAction.")
-	}
-
-	v = v.Elem()
-	t := reflect.TypeOf(s).Elem()
-	var totalbits int = 6
-	var numbits int
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		if field.Anonymous {
-			continue
-		}
-		if bit, ok := field.Tag.Lookup("bit"); ok {
-			fmt.Sscanf(bit, "%d", &numbits)
-			totalbits += numbits
-			// fmt.Println(field.Name, bit, numbits, totalbits)
-			// if v.Field(i).CanSet() {
-			//         v.Field(i).Set(reflect.ValueOf(uint32(numbits)))
-			// }
-		}
-	}
-	return totalbits, nil
-}
-
-func BitRead(bits []Bit, s SubAction) error {
-	v := reflect.ValueOf(s)
-	if v.Kind() != reflect.Ptr {
-		return errors.New("BitRead should be called with a pointer to a SubAction.")
-	}
-
-	v = v.Elem()
-	t := reflect.TypeOf(s).Elem()
-
-	var p int = 6
-	var numbits int
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		if field.Anonymous {
-			continue
-		}
-		if bit, ok := field.Tag.Lookup("bit"); ok {
-			fmt.Sscanf(bit, "%d", &numbits)
-			switch t.Field(i).Type.Kind() {
-			case reflect.Uint32:
-				byts := JoinBits(bits[p:p+numbits], 32)
-				r := bytes.NewReader(byts)
-				var value uint32
-				err := binary.Read(r, binary.BigEndian, &value)
-				if err != nil {
-					return err
-				}
-				if v.Field(i).CanSet() {
-					v.Field(i).Set(reflect.ValueOf(value))
-				}
-			case reflect.Int32:
-				byts := JoinBits(bits[p:p+numbits], 32)
-				r := bytes.NewReader(byts)
-				var value int32
-				err := binary.Read(r, binary.BigEndian, &value)
-				if err != nil {
-					return err
-				}
-				if v.Field(i).CanSet() {
-					v.Field(i).Set(reflect.ValueOf(value))
-				}
-			case reflect.Bool:
-				byts := JoinBits(bits[p:p+numbits], 8)
-				r := bytes.NewReader(byts)
-				var value bool
-				err := binary.Read(r, binary.BigEndian, &value)
-				if err != nil {
-					return err
-				}
-				if v.Field(i).CanSet() {
-					v.Field(i).Set(reflect.ValueOf(value))
-				}
-			default:
-			}
-			p += numbits
-		} else {
-			return errors.New(fmt.Sprintf("All SubAction fields should have a `bit` number tag. SubAction: %v | Field: %v", t.Name(), field.Name))
-		}
-	}
-	return nil
-}
-
 func DecodeSubAction(r *binread.Reader, s SubAction) error {
-	// fmt.Printf("%#+v\n", s)
-	numbits, err := NumBits(s)
+	numbits, err := binread.NumBits(s)
 	if err != nil {
 		return err
 	}
@@ -741,6 +601,6 @@ func DecodeSubAction(r *binread.Reader, s SubAction) error {
 		return err
 	}
 
-	bits := SplitBytes(byts)
-	return BitRead(bits, s)
+	bits := binread.SplitBytes(byts)
+	return binread.BitRead(bits, s, 6)
 }

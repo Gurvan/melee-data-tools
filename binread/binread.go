@@ -86,19 +86,30 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 	if reflect.TypeOf(data).Implements(interBinReader) {
 		printlnDebug("Reader")
 		err = any(data).(BinReader).BinRead(r, args...)
+		if err != nil {
+			return err
+		}
 	} else {
 		switch v.Kind() {
+		case reflect.Invalid:
+			return nil
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128:
+			printlnDebug("Other Type:", v.Type())
+			err = binary.Read(r, binary.BigEndian, data)
+			if err != nil {
+				return err
+			}
 		case reflect.Struct:
 			printlnDebug("Struct:", v.NumField())
 			for i := 0; i < v.NumField(); i++ {
 				field := reflect.New(v.Field(i).Type()).Interface()
 				err = unmarshal(r, field, args...)
+				if err != nil {
+					return err
+				}
 				printlnDebug("Field:", v.Type().Field(i).Name)
 				if v.Field(i).CanSet() {
 					v.Field(i).Set(reflect.ValueOf(field).Elem())
-				}
-				if err != nil {
-					return err
 				}
 			}
 		case reflect.Array:
@@ -106,10 +117,10 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 			for i := 0; i < v.Len(); i++ {
 				item := reflect.New(v.Index(i).Type()).Interface()
 				err = unmarshal(r, item, args...)
-				v.Index(i).Set(reflect.ValueOf(item).Elem())
 				if err != nil {
 					return err
 				}
+				v.Index(i).Set(reflect.ValueOf(item).Elem())
 			}
 		case reflect.Slice:
 			printlnDebug("Slice")
@@ -117,15 +128,13 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 				for i := 0; i < v.Len(); i++ {
 					item := reflect.New(v.Index(i).Type()).Interface()
 					err = unmarshal(r, item, args...)
-					v.Index(i).Set(reflect.ValueOf(item).Elem())
 					if err != nil {
 						return err
 					}
+					v.Index(i).Set(reflect.ValueOf(item).Elem())
 				}
 			}
 		default:
-			printlnDebug("Other Type:", v.Type())
-			err = binary.Read(r, binary.BigEndian, data)
 		}
 	}
 
