@@ -91,7 +91,8 @@ subactionloop:
 		}
 	}
 
-	a.Subactions.Value = subactions
+	// a.Subactions.Value = subactions
+	a.Subactions.SetValue(subactions)
 	_, err = r.Seek(before, io.SeekStart)
 	return err
 }
@@ -129,12 +130,13 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 
 	actionsNames := make(map[string]int)
 	for actionIndex, action := range actions {
-		name := action.Name.Value.String()
+		name := action.Name.GetValue().String()
 
 		// Name unnamed actions
 		if name == "" {
 			name = "Function_" + fmt.Sprint(actionIndex)
-			actions[actionIndex].Name.Value = NullTerminatedString(name)
+			// actions[actionIndex].Name.Value = NullTerminatedString(name)
+			actions[actionIndex].Name.SetValue(NullTerminatedString(name))
 		}
 
 		// Increment names for actions with duplicate names
@@ -143,13 +145,13 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 			suffix := "_figatree"
 			prefix := strings.TrimSuffix(name, suffix)
 			name = prefix + "_" + fmt.Sprintf("%d", duplicate) + suffix
-			actions[actionIndex].Name.Value = NullTerminatedString(name)
+			actions[actionIndex].Name.SetValue(NullTerminatedString(name))
 		} else {
 			actionsNames[name] = 1
 		}
 
 		// Add subroutines to actions slice
-		for _, subaction := range action.Subactions.Value {
+		for _, subaction := range action.Subactions.GetValue() {
 			switch s := subaction.(type) {
 			case *Subroutine:
 				addr := Addr(s.Pointer)
@@ -158,7 +160,8 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 					continue
 				}
 				newAction := Action{}
-				newAction.Name = Ptr[NullTerminatedString]{Value: NullTerminatedString(name)}
+				newAction.Name = Ptr[NullTerminatedString]{}
+				newAction.Name.SetValue(NullTerminatedString(name))
 				actionsNames[name] = 1
 				newAction.Subactions.Offset = addr
 				newAction.AfterParse(r)

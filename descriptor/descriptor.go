@@ -62,7 +62,7 @@ func (t *Relocation) BinRead(r *binread.Reader, args ...Args) error {
 		if err != nil {
 			return err
 		}
-		offsets[c] = v.Value
+		offsets[c] = v.GetValue()
 		c++
 		if c >= count {
 			break
@@ -117,7 +117,7 @@ func (n *NamedOffset) BinRead(r *binread.Reader, args ...Args) error {
 	if err != nil {
 		return err
 	}
-	n.Name = namePtr.Value
+	n.Name = namePtr.GetValue()
 	return nil
 }
 

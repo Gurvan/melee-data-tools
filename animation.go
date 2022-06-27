@@ -78,7 +78,8 @@ func (a *AnimationData) AfterParse(r *binread.Reader, _ ...Args) error {
 		nodes = append(nodes, tracks)
 	}
 
-	a.Tracks.Value = nodes
+	// a.Tracks.Value = nodes
+	a.Tracks.SetValue(nodes)
 	_, err = r.Seek(before, io.SeekStart)
 	return err
 }

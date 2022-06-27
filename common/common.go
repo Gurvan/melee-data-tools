@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/Gurvan/melee-data-tools/binread"
+	"github.com/Gurvan/melee-data-tools/logger"
 )
 
 type Args = binread.Args
@@ -64,8 +65,20 @@ func (s *NullTerminatedString) BinRead(r *binread.Reader, _ ...Args) error {
 }
 
 type Ptr[T any] struct {
-	Offset Addr
-	Value  T
+	Offset   Addr
+	ValuePtr *T
+}
+
+func (p *Ptr[T]) GetValue() T {
+	if p.ValuePtr == nil {
+		p.ValuePtr = new(T)
+		logger.Warning.Printf("Tryied to deref pointer of type %T. Returning %T default value instead.", *p.ValuePtr, *p.ValuePtr)
+	}
+	return *p.ValuePtr
+}
+
+func (p *Ptr[T]) SetValue(v T) {
+	p.ValuePtr = &v
 }
 
 var _ binread.BinReader = (*Ptr[uint32])(nil)
@@ -82,14 +95,7 @@ func (p *Ptr[T]) BinRead(r *binread.Reader, args ...Args) error {
 		}
 
 	}
-	// for _, arg := range args {
-	//         if p.Offset, ok = arg.(Addr); ok {
-	//                 if seek, ok := args[1].(int); ok {
-	//                         seekFrom = seek
-	//                 }
-	//                 break
-	//         }
-	// }
+
 	if !ok {
 		err := r.Decode(&p.Offset)
 		if err != nil {
@@ -97,18 +103,61 @@ func (p *Ptr[T]) BinRead(r *binread.Reader, args ...Args) error {
 		}
 	}
 
-	before, err := r.Seek(0, io.SeekCurrent)
+	before := r.CurrentPosition()
+	_, err := r.Seek(p.Offset.ToSeek(), seekFrom)
 	if err != nil {
 		return err
 	}
 
-	_, err = r.Seek(p.Offset.ToSeek(), seekFrom)
+	p.ValuePtr = new(T)
+
+	err = r.Decode(p.ValuePtr, args...)
 	if err != nil {
 		return err
 	}
 
-	err = r.Decode(&p.Value, args...)
+	_, err = r.Seek(before, io.SeekStart)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
+type OptionalPtr[T any] Ptr[T]
+
+func (p *OptionalPtr[T]) BinRead(r *binread.Reader, args ...Args) error {
+	seekFrom := io.SeekStart
+	ok := false
+	for _, args := range args {
+		if p.Offset, ok = args["offset"].(Addr); ok {
+			if seek, ok := args["seekfrom"].(int); ok {
+				seekFrom = seek
+			}
+			break
+		}
+
+	}
+
+	if !ok {
+		err := r.Decode(&p.Offset)
+		if err != nil {
+			return err
+		}
+	}
+
+	if p.Offset == Addr(0x20) {
+		return nil
+	}
+
+	before := r.CurrentPosition()
+	_, err := r.Seek(p.Offset.ToSeek(), seekFrom)
+	if err != nil {
+		return err
+	}
+
+	p.ValuePtr = new(T)
+
+	err = r.Decode(p.ValuePtr, args...)
 	if err != nil {
 		return err
 	}

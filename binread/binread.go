@@ -60,6 +60,17 @@ func (r *Reader) Decode(data any, args ...Args) error {
 	return unmarshal(r, data, args...)
 }
 
+func (r *Reader) DecodePeek(data any, args ...Args) error {
+	before := r.CurrentPosition()
+
+	err := r.Decode(data)
+	if err != nil {
+		return err
+	}
+	_, err = r.Seek(before, io.SeekStart)
+	return err
+}
+
 func unmarshal(r *Reader, data any, args ...Args) error {
 	rv := reflect.ValueOf(data)
 
