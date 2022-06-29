@@ -81,13 +81,9 @@ subactionloop:
 
 		subactions = append(subactions, subaction)
 		switch subaction.(type) {
-		// case *EndOfScript, *GoTo, *SubroutineReturn:
-		case *EndOfScript, *SubroutineReturn:
-			// fmt.Printf("%T\n", subaction)
-			// fmt.Println("BREAK")
+		case *EndOfScript, *GoTo, *SubroutineReturn:
 			break subactionloop
 		default:
-			// fmt.Printf("%T\n", subaction)
 		}
 	}
 

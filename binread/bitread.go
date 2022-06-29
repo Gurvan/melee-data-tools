@@ -75,9 +75,17 @@ func NumBits(s any) (int, error) {
 }
 
 func BitRead(bits []Bit, s any, startIndex int) error {
+	readBits := func(value any, p, numbits int) (any, error) {
+		numbytes := reflect.TypeOf(value).Elem().Size()
+		byts := JoinBits(bits[p:p+numbits], int(8*numbytes))
+		r := bytes.NewReader(byts)
+		err := binary.Read(r, binary.BigEndian, value)
+		return any(value), err
+
+	}
 	v := reflect.ValueOf(s)
 	if v.Kind() != reflect.Ptr {
-		return errors.New("BitRead should be called with a pointer to a SubAction.")
+		return errors.New("BitRead should be called with a pointer to a struct.")
 	}
 
 	v = v.Elem()
@@ -92,30 +100,29 @@ func BitRead(bits []Bit, s any, startIndex int) error {
 		}
 		if bit, ok := field.Tag.Lookup("bit"); ok {
 			fmt.Sscanf(bit, "%d", &numbits)
-			byts := JoinBits(bits[p:p+numbits], 32)
-			r := bytes.NewReader(byts)
 
 			var value any
 			var err error
 			switch field.Type.Kind() {
 			case reflect.Uint32:
 				var valueLocal uint32
-				err = binary.Read(r, binary.BigEndian, &valueLocal)
-				value = any(valueLocal)
+				value, err = readBits(&valueLocal, p, numbits)
 			case reflect.Int32:
 				var valueLocal int32
-				err = binary.Read(r, binary.BigEndian, &valueLocal)
-				value = any(valueLocal)
+				value, err = readBits(&valueLocal, p, numbits)
 			case reflect.Bool:
 				var valueLocal bool
-				err = binary.Read(r, binary.BigEndian, &valueLocal)
-				value = any(valueLocal)
+				value, err = readBits(&valueLocal, p, numbits)
+			default:
+				panic(fmt.Sprintf("Type %v not implemented for Bitread", field.Type))
 			}
 			if err != nil {
-				return err
+				panic(err)
 			}
 			if v.Field(i).CanSet() {
-				v.Field(i).Set(reflect.ValueOf(value).Convert(field.Type))
+				fmt.Println("Set to:", value)
+				// v.Field(i).Set(reflect.ValueOf(value).Elem().Convert(field.Type))
+				v.Field(i).Set(reflect.ValueOf(value).Elem().Convert(field.Type))
 			}
 			p += numbits
 		} else {

@@ -1,6 +1,31 @@
 package attributes
 
-import "github.com/Gurvan/melee-data-tools/helpers"
+import (
+	"github.com/Gurvan/melee-data-tools/binread"
+	"github.com/Gurvan/melee-data-tools/common"
+	"github.com/Gurvan/melee-data-tools/helpers"
+)
+
+type ThrowFlags struct {
+	DThrowIsWeightIndependant bool `bit:"1"`
+	BThrowIsWeightIndependant bool `bit:"1"`
+	UThrowIsWeightIndependant bool `bit:"1"`
+	FThrowIsWeightIndependant bool `bit:"1"`
+}
+
+func (f *ThrowFlags) BinRead(r *binread.Reader, args ...common.Args) error {
+	var err error
+
+	byts := make([]byte, 1)
+	err = r.Decode(&byts)
+	if err != nil {
+		return err
+	}
+
+	bits := binread.SplitBytes(byts)
+	err = binread.BitRead(bits, f, 4)
+	return err
+}
 
 type Common struct {
 	WalkSpeedRelative               float32
@@ -49,7 +74,7 @@ type Common struct {
 	LedgeJumpStartSpeedVertical     float32
 	_                               float32 // item_throw_velocity
 	_                               float32 // item_throw_damage_scale
-	SSpecialGroundSpeedMultiplier   float32
+	SpecialSGroundSpeedMultiplier   float32
 	_                               float32
 	_                               float32
 	_                               float32
@@ -99,7 +124,8 @@ type Common struct {
 	_                               float32
 	_                               float32
 	_                               float32
-	ThrowWeightDependant            uint8 // F=1,U=2,B=4,D=8 / throw is weight dependant is bit is 0
+	ThrowFlags                      ThrowFlags
+	// ThrowWeightDependant uint8 // F=1,U=2,B=4,D=8 / throw is weight dependant is bit is 0
 }
 
 func (a Common) String() string {
