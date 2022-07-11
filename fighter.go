@@ -13,7 +13,7 @@ import (
 
 type FighterData[AS any] struct {
 	AttributesCommon  Ptr[attributes.Common]
-	AttributesSpecial Ptr[attributes.SpecialAttributes]
+	AttributesSpecial Ptr[attributes.Special]
 	_                 [4]byte
 	ActionTable       Ptr[fighter.ActionTable]
 	_                 [32]byte
@@ -28,6 +28,18 @@ type FighterData[AS any] struct {
 }
 
 type FighterFile = File[FighterData[any]]
+
+func (f *FighterData[any]) AfterParse(r *binread.Reader, _ ...Args) error {
+	if f.Model.ValuePtr == nil {
+		return nil
+	}
+
+	model := f.Model.ValuePtr
+	name := NullTerminatedString("Metal")
+	model.Name.ValuePtr = &name
+
+	return nil
+}
 
 func (f *FighterData[AS]) ParseAnimation(animationPath string) error {
 	var err error
@@ -74,9 +86,12 @@ func (f *FighterData[AS]) ParseAnimation(animationPath string) error {
 func (f *FighterData[AS]) ParseModel(modelPath string) error {
 	var modelFile ModelFile
 
-	modelData, _, err := modelFile.ReadFromFile(modelPath)
+	modelData, desc, err := modelFile.ReadFromFile(modelPath)
 	if err != nil {
 		return err
+	}
+	if firstRoot, err := desc.FirstRootName(); err == nil {
+		modelData.UpdateName(firstRoot)
 	}
 
 	f.Model.SetValue(modelData.Joint)

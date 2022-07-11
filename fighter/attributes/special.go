@@ -15,7 +15,7 @@ import (
 
 type UnimplementedSpecialAttributes struct{}
 
-type SpecialAttributes struct {
+type Special struct {
 	any
 }
 
@@ -32,7 +32,7 @@ func fighterSwitch(firstRoot string) (any, error) {
 	}
 }
 
-func (a *SpecialAttributes) BinRead(r *binread.Reader, args ...Args) error {
+func (a *Special) BinRead(r *binread.Reader, args ...Args) error {
 
 	var firstRoot string
 	var err error
@@ -56,6 +56,6 @@ func (a *SpecialAttributes) BinRead(r *binread.Reader, args ...Args) error {
 		logger.Error.Fatal(err)
 		return err
 	}
-	*a = SpecialAttributes{reflect.ValueOf(attr).Elem().Interface()}
+	*a = Special{reflect.ValueOf(attr).Elem().Interface()}
 	return nil
 }

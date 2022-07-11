@@ -67,9 +67,9 @@ func (a *AnimationData) AfterParse(r *binread.Reader, _ ...Args) error {
 
 	nodes := make([][]animation.Track, 0)
 	for _, c := range a.TracksCounts {
-		if c == 0 {
-			continue
-		}
+		// if c == 0 {
+		//         continue
+		// }
 		tracks := make([]animation.Track, c)
 		err = r.Decode(&tracks)
 		if err != nil {
@@ -78,7 +78,6 @@ func (a *AnimationData) AfterParse(r *binread.Reader, _ ...Args) error {
 		nodes = append(nodes, tracks)
 	}
 
-	// a.Tracks.Value = nodes
 	a.Tracks.SetValue(nodes)
 	_, err = r.Seek(before, io.SeekStart)
 	return err

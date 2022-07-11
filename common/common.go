@@ -72,7 +72,7 @@ type Ptr[T any] struct {
 func (p *Ptr[T]) GetValue() T {
 	if p.ValuePtr == nil {
 		p.ValuePtr = new(T)
-		logger.Warning.Printf("Tryied to deref pointer of type %T. Returning %T default value instead.", *p.ValuePtr, *p.ValuePtr)
+		logger.Warning.Printf("Try to deref pointer of type %T. Returning %T default value instead.", *p.ValuePtr, *p.ValuePtr)
 	}
 	return *p.ValuePtr
 }

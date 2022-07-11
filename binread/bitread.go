@@ -26,14 +26,25 @@ func SplitBytes(byts []byte) []Bit {
 	return bits
 }
 
-func JoinBits(bits []Bit, padto int) []byte {
+func JoinBits(bits []Bit, padto int, signed bool) []byte {
+	signBit := bits[0]
 	byts := make([]byte, 0)
 	if padto > len(bits) {
 		padding := make([]Bit, padto-len(bits))
+		if signed {
+			for i := range padding {
+				padding[i] = signBit
+			}
+		}
 		bits = append(padding, bits...)
 	} else {
 		numbytes := (len(bits)-1)/8 + 1
 		padding := make([]Bit, 8*numbytes-len(bits))
+		if signed {
+			for i := range padding {
+				padding[i] = signBit
+			}
+		}
 		bits = append(padding, bits...)
 	}
 
@@ -67,17 +78,19 @@ func NumBits(s any) (int, error) {
 			continue
 		}
 		if bit, ok := field.Tag.Lookup("bit"); ok {
-			fmt.Sscanf(bit, "%d", &numbits)
-			totalbits += numbits
+			n, _ := fmt.Sscanf(bit, "%d", &numbits)
+			if n == 1 {
+				totalbits += numbits
+			}
 		}
 	}
 	return totalbits, nil
 }
 
 func BitRead(bits []Bit, s any, startIndex int) error {
-	readBits := func(value any, p, numbits int) (any, error) {
+	readBits := func(value any, p, numbits int, signed bool) (any, error) {
 		numbytes := reflect.TypeOf(value).Elem().Size()
-		byts := JoinBits(bits[p:p+numbits], int(8*numbytes))
+		byts := JoinBits(bits[p:p+numbits], int(8*numbytes), signed)
 		r := bytes.NewReader(byts)
 		err := binary.Read(r, binary.BigEndian, value)
 		return any(value), err
@@ -99,6 +112,9 @@ func BitRead(bits []Bit, s any, startIndex int) error {
 			continue
 		}
 		if bit, ok := field.Tag.Lookup("bit"); ok {
+			if bit == "-" || bit == "ignore" {
+				continue
+			}
 			fmt.Sscanf(bit, "%d", &numbits)
 
 			var value any
@@ -106,13 +122,13 @@ func BitRead(bits []Bit, s any, startIndex int) error {
 			switch field.Type.Kind() {
 			case reflect.Uint32:
 				var valueLocal uint32
-				value, err = readBits(&valueLocal, p, numbits)
+				value, err = readBits(&valueLocal, p, numbits, false)
 			case reflect.Int32:
 				var valueLocal int32
-				value, err = readBits(&valueLocal, p, numbits)
+				value, err = readBits(&valueLocal, p, numbits, true)
 			case reflect.Bool:
 				var valueLocal bool
-				value, err = readBits(&valueLocal, p, numbits)
+				value, err = readBits(&valueLocal, p, numbits, false)
 			default:
 				panic(fmt.Sprintf("Type %v not implemented for Bitread", field.Type))
 			}
@@ -120,7 +136,6 @@ func BitRead(bits []Bit, s any, startIndex int) error {
 				panic(err)
 			}
 			if v.Field(i).CanSet() {
-				fmt.Println("Set to:", value)
 				// v.Field(i).Set(reflect.ValueOf(value).Elem().Convert(field.Type))
 				v.Field(i).Set(reflect.ValueOf(value).Elem().Convert(field.Type))
 			}

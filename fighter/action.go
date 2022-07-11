@@ -3,7 +3,7 @@ package fighter
 import (
 	"fmt"
 	"io"
-	"strings"
+	"regexp"
 
 	"github.com/Gurvan/melee-data-tools/binread"
 	. "github.com/Gurvan/melee-data-tools/common"
@@ -124,7 +124,9 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 		return err
 	}
 
+	subroutineIndex := 0
 	actionsNames := make(map[string]int)
+	subroutineByAddr := make(map[Addr]string)
 	for actionIndex, action := range actions {
 		name := action.Name.GetValue().String()
 
@@ -135,12 +137,15 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 			actions[actionIndex].Name.SetValue(NullTerminatedString(name))
 		}
 
+		name = truncActionName(name)
+
 		// Increment names for actions with duplicate names
 		if duplicate, ok := actionsNames[name]; ok {
 			actionsNames[name] = duplicate + 1
-			suffix := "_figatree"
-			prefix := strings.TrimSuffix(name, suffix)
-			name = prefix + "_" + fmt.Sprintf("%d", duplicate) + suffix
+			// suffix := "_figatree"
+			// prefix := strings.TrimSuffix(name, suffix)
+			// name = prefix + "_" + fmt.Sprintf("%d", duplicate) + suffix
+			name = name + "_" + fmt.Sprintf("%d", duplicate)
 			actions[actionIndex].Name.SetValue(NullTerminatedString(name))
 		} else {
 			actionsNames[name] = 1
@@ -150,8 +155,18 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 		for _, subaction := range action.Subactions.GetValue() {
 			switch s := subaction.(type) {
 			case *Subroutine:
-				addr := Addr(s.Pointer)
-				name := "Subroutine" + addr.String()
+				addr := Addr(s.Pointer + 0x20)
+				// addr := Addr(s.Target)
+				name := ""
+				if n, ok := subroutineByAddr[addr]; ok {
+					name = n
+				} else {
+					name = "Subroutine_" + fmt.Sprint(subroutineIndex)
+					subroutineByAddr[addr] = name
+					subroutineIndex++
+				}
+				// name := "Subroutine" + addr.String()
+				s.PointerName = name
 				if _, ok := actionsNames[name]; ok {
 					continue
 				}
@@ -162,6 +177,8 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 				newAction.Subactions.Offset = addr
 				newAction.AfterParse(r)
 				actions = append(actions, newAction)
+			case *GoTo:
+				s.PointerName = name
 			default:
 			}
 		}
@@ -169,4 +186,21 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 
 	*t = actions
 	return nil
+}
+
+func truncActionName(name string) string {
+	var re *regexp.Regexp
+	var substrings []string
+	// substrings := re.FindStringSubmatch(name)
+	// if len(substrings) > 0 {
+	//         return substrings[len(substrings)-1]
+	// }
+
+	re, _ = regexp.Compile(".*_Share_ACTION_(.*)+_figatree")
+	substrings = re.FindStringSubmatch(name)
+	if len(substrings) == 0 {
+		// return ""
+		return name
+	}
+	return substrings[len(substrings)-1]
 }
