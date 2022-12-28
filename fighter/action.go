@@ -151,34 +151,40 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 			actionsNames[name] = 1
 		}
 
+		handleSubaction := func(pointer uint32) string {
+			addr := Addr(pointer + 0x20)
+			// addr := Addr(s.Target)
+			name := ""
+			if n, ok := subroutineByAddr[addr]; ok {
+				// log.Printf("[Subroutine_%d] Subroutine Fetched. Addr: %x\n", subroutineIndex, pointer+0x20)
+				name = n
+			} else {
+				// log.Printf("[Subroutine_%d] Subroutine Add. Addr: %x\n", subroutineIndex, pointer+0x20)
+				name = "Subroutine_" + fmt.Sprint(subroutineIndex)
+				subroutineByAddr[addr] = name
+				subroutineIndex++
+			}
+			// name := "Subroutine" + addr.String()
+			if _, ok := actionsNames[name]; ok {
+				return name
+			}
+			newAction := Action{}
+			newAction.Name = Ptr[NullTerminatedString]{}
+			newAction.Name.SetValue(NullTerminatedString(name))
+			actionsNames[name] = 1
+			newAction.Subactions.Offset = addr
+			newAction.AfterParse(r)
+			actions = append(actions, newAction)
+			return name
+		}
+
 		// Add subroutines to actions slice
 		for _, subaction := range action.Subactions.GetValue() {
 			switch s := subaction.(type) {
 			case *Subroutine:
-				addr := Addr(s.Pointer + 0x20)
-				// addr := Addr(s.Target)
-				name := ""
-				if n, ok := subroutineByAddr[addr]; ok {
-					name = n
-				} else {
-					name = "Subroutine_" + fmt.Sprint(subroutineIndex)
-					subroutineByAddr[addr] = name
-					subroutineIndex++
-				}
-				// name := "Subroutine" + addr.String()
-				s.PointerName = name
-				if _, ok := actionsNames[name]; ok {
-					continue
-				}
-				newAction := Action{}
-				newAction.Name = Ptr[NullTerminatedString]{}
-				newAction.Name.SetValue(NullTerminatedString(name))
-				actionsNames[name] = 1
-				newAction.Subactions.Offset = addr
-				newAction.AfterParse(r)
-				actions = append(actions, newAction)
+				s.PointerName = handleSubaction(s.Pointer)
 			case *GoTo:
-				s.PointerName = name
+				s.PointerName = handleSubaction(s.Pointer)
 			default:
 			}
 		}
