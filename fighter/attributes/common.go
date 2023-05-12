@@ -96,7 +96,7 @@ type Common struct {
 	WallJumpStartSpeedHorizontal    float32
 	WallJumpStartSpeedVertical      float32
 	_                               float32 // ceiling_tech_x_direction
-	_                               float32 // items related
+	EntryDisplacementModifier       float32
 	_                               float32
 	_                               float32
 	_                               float32
