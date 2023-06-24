@@ -285,7 +285,7 @@ func (ProjectileFlag) isSubaction() {}
 
 // 0x19
 type SetJumpState struct {
-	_ uint32 `bit:"26"`
+	State uint32 `bit:"26"`
 }
 
 func (SetJumpState) isSubaction() {}
