@@ -14,7 +14,7 @@ import (
 type FighterData[AS any] struct {
 	AttributesCommon  Ptr[attributes.Common]
 	AttributesSpecial Ptr[attributes.Special]
-	_                 [4]byte
+	ModelParams       Ptr[attributes.ModelParams]
 	ActionTable       Ptr[fighter.ActionTable]
 	_                 [32]byte
 	Hurtboxes         Ptr[fighter.Hurtboxes]
