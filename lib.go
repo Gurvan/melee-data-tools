@@ -63,6 +63,13 @@ func (f *File[T]) AfterParse(r *binread.Reader, _ ...Args) error {
 		if !strings.HasSuffix(firstRoot, "_joint") {
 			return errors.New(fmt.Sprintf("File first root %s does not belong to fighter model file.\n", firstRoot))
 		}
+    case CommonData:
+		if firstRoot, err = f.Desc.FirstRootName(); err != nil {
+			return err
+		}
+		if !strings.HasPrefix(firstRoot, "ftLoadCommonData") {
+			return errors.New(fmt.Sprintf("File first root %s does not belong to player common file.\n", firstRoot))
+		}
 	}
 
 	return nil

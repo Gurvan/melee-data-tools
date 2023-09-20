@@ -1,4 +1,4 @@
-package mdt
+package main
 
 import (
 	"encoding/json"
@@ -39,6 +39,26 @@ func PrettyString(obj interface{}) string {
 // }
 
 var animNameRegex = regexp.MustCompile(`.*_([a-zA-Z0-9]+)_figatree`)
+
+// func main() {
+// 	commonFile, err := os.Open("common.dat")
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	defer commonFile.Close()
+// 	reader := binread.NewReader(commonFile)
+//
+// 	common := mdt.CommonFile{}
+//
+// 	err = reader.Decode(&common)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+//
+// 	// fmt.Printf("%#+v\n", h)
+// 	spew.Dump(common.Desc.Header)
+// 	spew.Dump(common.Data)
+// }
 
 // func main() {
 //         fighterFile, err := os.Open("fighter.dat")
