@@ -3,7 +3,7 @@ package model
 import (
 	"fmt"
 
-	. "github.com/Gurvan/melee-data-tools/common"
+	. "github.com/Gurvan/melee-data-tools/lib"
 )
 
 type Flags uint32

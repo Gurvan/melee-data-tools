@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	"github.com/Gurvan/melee-data-tools/binread"
-	. "github.com/Gurvan/melee-data-tools/common"
+	. "github.com/Gurvan/melee-data-tools/lib"
 )
 
 type Version [4]byte

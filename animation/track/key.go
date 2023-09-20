@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/Gurvan/melee-data-tools/binread"
-	. "github.com/Gurvan/melee-data-tools/common"
+	. "github.com/Gurvan/melee-data-tools/lib"
 )
 
 type Key struct {

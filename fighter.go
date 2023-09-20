@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/Gurvan/melee-data-tools/binread"
-	. "github.com/Gurvan/melee-data-tools/common"
+	. "github.com/Gurvan/melee-data-tools/lib"
 	"github.com/Gurvan/melee-data-tools/fighter"
 	"github.com/Gurvan/melee-data-tools/fighter/attributes"
 	"github.com/Gurvan/melee-data-tools/logger"

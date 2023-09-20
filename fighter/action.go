@@ -6,7 +6,7 @@ import (
 	"regexp"
 
 	"github.com/Gurvan/melee-data-tools/binread"
-	. "github.com/Gurvan/melee-data-tools/common"
+	. "github.com/Gurvan/melee-data-tools/lib"
 	"github.com/Gurvan/melee-data-tools/descriptor"
 	"github.com/Gurvan/melee-data-tools/logger"
 )

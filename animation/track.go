@@ -3,7 +3,7 @@ package animation
 import (
 	"github.com/Gurvan/melee-data-tools/animation/track"
 	"github.com/Gurvan/melee-data-tools/binread"
-	. "github.com/Gurvan/melee-data-tools/common"
+	. "github.com/Gurvan/melee-data-tools/lib"
 )
 
 type Track struct {

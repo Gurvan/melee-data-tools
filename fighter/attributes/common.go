@@ -2,7 +2,7 @@ package attributes
 
 import (
 	"github.com/Gurvan/melee-data-tools/binread"
-	"github.com/Gurvan/melee-data-tools/common"
+	"github.com/Gurvan/melee-data-tools/lib"
 	"github.com/Gurvan/melee-data-tools/helpers"
 )
 
@@ -13,7 +13,7 @@ type ThrowFlags struct {
 	FThrowIsWeightIndependant bool `bit:"1"`
 }
 
-func (f *ThrowFlags) BinRead(r *binread.Reader, args ...common.Args) error {
+func (f *ThrowFlags) BinRead(r *binread.Reader, args ...lib.Args) error {
 	var err error
 
 	byts := make([]byte, 1)
