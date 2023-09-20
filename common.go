@@ -63,7 +63,7 @@ const (
 
 type BoneLookupTable struct {
 	_         [4]byte
-	Bones     Ptr[[54]uint8]
+	Bones     Ptr[[54]int8]
 	BoneCount int32
 }
 
