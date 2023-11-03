@@ -20,8 +20,8 @@ type CollVertex struct {
 }
 
 type CollLine struct {
-	Vertexindex1 int16
-	Vertexindex2 int16
+	VertexIndex1 int16
+	VertexIndex2 int16
 
 	NextLine     int16
 	PreviousLine int16
