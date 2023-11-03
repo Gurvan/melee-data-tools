@@ -93,7 +93,6 @@ func (p *Ptr[T]) BinRead(r *binread.Reader, args ...Args) error {
 			}
 			break
 		}
-
 	}
 
 	if !ok {
@@ -166,5 +165,45 @@ func (p *OptionalPtr[T]) BinRead(r *binread.Reader, args ...Args) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+type SizedArray[T any] struct {
+	Data []T
+	Size uint32
+}
+
+func (a *SizedArray[T]) BinRead(r *binread.Reader, _ ...Args) error {
+	var err error
+	var offset Addr
+
+	err = r.Decode(&offset)
+	if err != nil {
+		return err
+	}
+
+	err = r.Decode(&a.Size)
+	if err != nil {
+		return err
+	}
+
+    before := r.CurrentPosition()
+    _, err = r.Seek(offset.ToSeek(), io.SeekStart)
+	if err != nil {
+		return err
+	}
+
+    data := make([]T, a.Size)
+	err = r.Decode(&data)
+	if err != nil {
+		return err
+	}
+    a.Data = data
+
+    _, err = r.Seek(before, io.SeekStart)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

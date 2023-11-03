@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/Gurvan/melee-data-tools/binread"
-	. "github.com/Gurvan/melee-data-tools/lib"
 	"github.com/Gurvan/melee-data-tools/descriptor"
+	. "github.com/Gurvan/melee-data-tools/lib"
 )
 
 type File[T any] struct {
@@ -63,13 +63,17 @@ func (f *File[T]) AfterParse(r *binread.Reader, _ ...Args) error {
 		if !strings.HasSuffix(firstRoot, "_joint") {
 			return errors.New(fmt.Sprintf("File first root %s does not belong to fighter model file.\n", firstRoot))
 		}
-    case CommonData:
+	case CommonData:
 		if firstRoot, err = f.Desc.FirstRootName(); err != nil {
 			return err
 		}
 		if !strings.HasPrefix(firstRoot, "ftLoadCommonData") {
 			return errors.New(fmt.Sprintf("File first root %s does not belong to player common file.\n", firstRoot))
 		}
+	case StageData:
+        if _, err = f.Desc.FindRootOffset("coll_data"); err != nil {
+            return errors.New(fmt.Sprintf("Couldn't parse file as stage file. Error: %s\n", err))
+        }
 	}
 
 	return nil

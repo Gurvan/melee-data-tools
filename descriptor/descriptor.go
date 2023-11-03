@@ -98,8 +98,6 @@ func (n *NamedOffset) BinRead(r *binread.Reader, args ...Args) error {
 		}
 	}
 
-	before := uint32(r.CurrentPosition())
-
 	err := r.Decode(&n.Offset)
 	if err != nil {
 		return err
@@ -112,7 +110,7 @@ func (n *NamedOffset) BinRead(r *binread.Reader, args ...Args) error {
 	}
 
 	var namePtr Ptr[NullTerminatedString]
-	ptrArgs := Args{"offset": Addr(stringOffset + before + stringsOffset), "seekfrom": io.SeekStart}
+	ptrArgs := Args{"offset": Addr(stringsOffset + stringOffset), "seekfrom": io.SeekStart}
 	err = r.Decode(&namePtr, ptrArgs)
 	if err != nil {
 		return err
@@ -152,7 +150,7 @@ func (d *Descriptor) BinRead(r *binread.Reader, _ ...Args) error {
 		return err
 	}
 
-	rootRefOffset := 8 * (d.RootCount + d.RefCount)
+	rootRefOffset := uint32(r.CurrentPosition()) + 8*(d.RootCount+d.RefCount)
 	rootRefArgs := Args{"offset": rootRefOffset}
 	d.Roots = make([]Root, d.RootCount)
 	err = r.Decode(&d.Roots, rootRefArgs)
@@ -190,4 +188,13 @@ func (d *Descriptor) FirstRootName() (string, error) {
 		return "", errors.New("File should have at least 1 root. 0 found.")
 	}
 	return d.Roots[0].Name.String(), nil
+}
+
+func (d *Descriptor) FindRootOffset(name string) (Addr, error) {
+	for _, root := range d.Roots {
+		if root.Name.String() == name {
+			return root.Offset, nil
+		}
+	}
+	return Addr(0x0), errors.New(fmt.Sprintf("Couldn't find root %s\n", name))
 }
