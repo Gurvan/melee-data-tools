@@ -14,6 +14,47 @@ type StageData struct {
 
 type StageFile = File[StageData]
 
+type CollDirectionFlags struct {
+	Disabled bool `bit:"1"`
+	Left     bool `bit:"1"`
+	Right    bool `bit:"1"`
+	Bottom   bool `bit:"1"`
+	Top      bool `bit:"1"`
+}
+
+func (f *CollDirectionFlags) BinRead(r *binread.Reader, _ ...Args) error {
+	var err error
+
+	byts := make([]byte, 2)
+	err = r.Decode(&byts)
+	if err != nil {
+		return err
+	}
+
+	bits := binread.SplitBytes(byts)
+	err = binread.BitRead(bits, f, 11)
+	return err
+}
+
+type CollPropertyFlags struct {
+	LedgeGrab   bool `bit:"1"`
+	DropThrough bool `bit:"1"`
+}
+
+func (f *CollPropertyFlags) BinRead(r *binread.Reader, _ ...Args) error {
+	var err error
+
+	byts := make([]byte, 1)
+	err = r.Decode(&byts)
+	if err != nil {
+		return err
+	}
+
+	bits := binread.SplitBytes(byts)
+	err = binread.BitRead(bits, f, 6)
+	return err
+}
+
 type CollVertex struct {
 	X float32
 	Y float32
@@ -29,9 +70,9 @@ type CollLine struct {
 	NextLineAltGroup     int16
 	PreviousLineAltGroup int16
 
-	CollisionFlag int16
-	Flag          byte
-	Material      byte
+	DirectionFlags CollDirectionFlags
+	PropertyFlags  CollPropertyFlags
+	Material       byte
 }
 
 type CollLineGroup struct {
@@ -61,24 +102,24 @@ type CollLineGroup struct {
 
 type CollData struct {
 	Vertices SizedArray[CollVertex]
-    Links SizedArray[CollLine]
+	Links    SizedArray[CollLine]
 
-    TopLinksOffset int16
-    TopLinksCount int16
+	TopLinksOffset int16
+	TopLinksCount  int16
 
-    BottomLinksOffset int16
-    BottomLinksCount int16
+	BottomLinksOffset int16
+	BottomLinksCount  int16
 
-    RightLinksOffset int16
-    RightLinksCount int16
+	RightLinksOffset int16
+	RightLinksCount  int16
 
-    LeftLinksOffset int16
-    LeftLinksCount int16
+	LeftLinksOffset int16
+	LeftLinksCount  int16
 
-    DynamicLinksOffset int16
-    DynamicLinksCount int16
+	DynamicLinksOffset int16
+	DynamicLinksCount  int16
 
-    LineGroups SizedArray[CollLineGroup]
+	LineGroups SizedArray[CollLineGroup]
 }
 
 func (s *StageData) BinRead(r *binread.Reader, args ...Args) error {
