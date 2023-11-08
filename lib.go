@@ -74,6 +74,12 @@ func (f *File[T]) AfterParse(r *binread.Reader, _ ...Args) error {
         if _, err = f.Desc.FindRootOffset("coll_data"); err != nil {
             return errors.New(fmt.Sprintf("Couldn't parse file as stage file. Error: %s\n", err))
         }
+        if _, err = f.Desc.FindRootOffset("map_head"); err != nil {
+            return errors.New(fmt.Sprintf("Couldn't parse file as stage file. Error: %s\n", err))
+        }
+        if _, err = f.Desc.FindRootOffset("grGroundParam"); err != nil {
+            return errors.New(fmt.Sprintf("Couldn't parse file as stage file. Error: %s\n", err))
+        }
 	}
 
 	return nil

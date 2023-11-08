@@ -329,9 +329,16 @@ type MapHead struct {
 	GeneralPoints SizedArray[GeneralPoints]
 }
 
+
+type GroundParam struct {
+    StageScale float32
+    _ [216]byte
+}
+
 type StageData struct {
 	CollData CollData
 	MapHead  MapHead
+    GroundParam GroundParam
 }
 
 type StageFile = File[StageData]
@@ -340,12 +347,16 @@ func (s *StageData) BinRead(r *binread.Reader, args ...Args) error {
 	var err error
 	var collDataOffset Addr
 	var mapHeadOffset Addr
+	var groundParamOffset Addr
 	for _, args := range args {
 		if desc, ok := args["descriptor"].(*descriptor.Descriptor); ok {
 			if collDataOffset, err = desc.FindRootOffset("coll_data"); err != nil {
 				return err
 			}
 			if mapHeadOffset, err = desc.FindRootOffset("map_head"); err != nil {
+				return err
+			}
+			if groundParamOffset, err = desc.FindRootOffset("grGroundParam"); err != nil {
 				return err
 			}
 			break
@@ -356,7 +367,6 @@ func (s *StageData) BinRead(r *binread.Reader, args ...Args) error {
 	if err != nil {
 		return err
 	}
-
 	err = r.Decode(&s.CollData)
 	if err != nil {
 		return err
@@ -366,8 +376,16 @@ func (s *StageData) BinRead(r *binread.Reader, args ...Args) error {
 	if err != nil {
 		return err
 	}
-
 	err = r.Decode(&s.MapHead)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.Seek(groundParamOffset.ToSeek(), io.SeekStart)
+	if err != nil {
+		return err
+	}
+	err = r.Decode(&s.GroundParam)
 	if err != nil {
 		return err
 	}
