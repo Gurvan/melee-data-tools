@@ -329,16 +329,15 @@ type MapHead struct {
 	GeneralPoints SizedArray[GeneralPoints]
 }
 
-
 type GroundParam struct {
-    StageScale float32
-    _ [216]byte
+	StageScale float32
+	_          [216]byte
 }
 
 type StageData struct {
-	CollData CollData
-	MapHead  MapHead
-    GroundParam GroundParam
+	CollData    CollData
+	MapHead     MapHead
+	GroundParam GroundParam
 }
 
 type StageFile = File[StageData]

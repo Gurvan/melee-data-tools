@@ -1,11 +1,13 @@
-package fighter
+package subaction
 
 import (
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 
 	"github.com/Gurvan/melee-data-tools/binread"
+	. "github.com/Gurvan/melee-data-tools/lib"
 )
 
 type emptySubAction struct{}
@@ -727,4 +729,68 @@ func DecodeSubAction(r *binread.Reader, s SubAction) error {
 
 	bits := binread.SplitBytes(byts)
 	return binread.BitRead(bits, s, 6)
+}
+
+type SubActions []SubAction
+
+func (a *SubActions) BinRead(r *binread.Reader, args ...Args) error {
+	var offset Addr
+	var err error
+
+	ok := false
+	for _, args := range args {
+		offset, ok = args["offset"].(Addr)
+		if ok {
+			break
+		}
+	}
+
+	if !ok {
+		err = r.Decode(&offset)
+		if err != nil {
+			return err
+		}
+	}
+
+	before := r.CurrentPosition()
+	_, err = r.Seek(offset.ToSeek(), io.SeekStart)
+	if err != nil {
+		return err
+	}
+
+	subactions := make([]SubAction, 0)
+
+subactionloop:
+	for {
+		subac, err := GetSubActionType(r)
+		if err != nil {
+			if _, ok := err.(*SubActionNotImplemented); ok {
+				var x [4]byte
+				r.Decode(&x)
+				continue
+			} else {
+				return err
+			}
+		}
+
+		err = DecodeSubAction(r, subac)
+		if err != nil {
+			return err
+		}
+
+		subactions = append(subactions, subac)
+		switch subac.(type) {
+		case *EndOfScript, *GoTo, *SubroutineReturn:
+			break subactionloop
+		default:
+		}
+	}
+
+	_, err = r.Seek(before, io.SeekStart)
+	if err != nil {
+		return err
+	}
+
+	*a = subactions
+	return nil
 }

@@ -8,8 +8,8 @@ import (
 
 	"github.com/Gurvan/melee-data-tools/binread"
 
-	. "github.com/Gurvan/melee-data-tools/lib"
 	"github.com/Gurvan/melee-data-tools/descriptor"
+	. "github.com/Gurvan/melee-data-tools/lib"
 	"github.com/Gurvan/melee-data-tools/logger"
 )
 
@@ -27,13 +27,14 @@ func fighterSwitch(firstRoot string) (any, error) {
 	switch name {
 	case "Captain":
 		return any(&Ca{}), nil
+	case "Falco":
+		return any(&Fc{}), nil
 	default:
 		return any(&UnimplementedSpecialAttributes{}), nil
 	}
 }
 
 func (a *Special) BinRead(r *binread.Reader, args ...Args) error {
-
 	var firstRoot string
 	var err error
 	for _, args := range args {

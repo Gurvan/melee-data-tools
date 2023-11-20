@@ -7,8 +7,8 @@ import (
 
 	"github.com/Gurvan/melee-data-tools/binread"
 	. "github.com/Gurvan/melee-data-tools/lib"
-	"github.com/Gurvan/melee-data-tools/descriptor"
 	"github.com/Gurvan/melee-data-tools/logger"
+	"github.com/Gurvan/melee-data-tools/subaction"
 )
 
 type ActionFlags struct {
@@ -45,53 +45,55 @@ type Action struct {
 	Name          Ptr[NullTerminatedString]
 	Animation     Ptr[any]
 	AnimationSize uint32
-	Subactions    Ptr[[]SubAction]
-	Flags         ActionFlags
-	_             [4]byte
+	// Subactions    Ptr[[]subaction.SubAction]
+	// Subactions Ptr[subaction.SubActions]
+	Subactions subaction.SubActions
+	Flags      ActionFlags
+	_          [4]byte
 }
 
-func (a *Action) AfterParse(r *binread.Reader, _ ...Args) error {
-	subactions := make([]SubAction, 0)
-
-	before := r.CurrentPosition()
-
-	_, err := r.Seek(a.Subactions.Offset.ToSeek(), io.SeekStart)
-	if err != nil {
-		return err
-	}
-
-subactionloop:
-	for {
-		subaction, err := GetSubActionType(r)
-		if err != nil {
-			if _, ok := err.(*SubActionNotImplemented); ok {
-				var x [4]byte
-				r.Decode(&x)
-				// log.Println(err)
-				continue
-			} else {
-				return err
-			}
-		}
-
-		err = DecodeSubAction(r, subaction)
-		if err != nil {
-			return err
-		}
-
-		subactions = append(subactions, subaction)
-		switch subaction.(type) {
-		case *EndOfScript, *GoTo, *SubroutineReturn:
-			break subactionloop
-		default:
-		}
-	}
-
-	// a.Subactions.Value = subactions
-	a.Subactions.SetValue(subactions)
-	_, err = r.Seek(before, io.SeekStart)
-	return err
-}
+// func (a *Action) AfterParse(r *binread.Reader, _ ...Args) error {
+// 	subactions := make([]subaction.SubAction, 0)
+//
+// 	before := r.CurrentPosition()
+//
+// 	_, err := r.Seek(a.Subactions.Offset.ToSeek(), io.SeekStart)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// subactionloop:
+// 	for {
+// 		subac, err := subaction.GetSubActionType(r)
+// 		if err != nil {
+// 			if _, ok := err.(*subaction.SubActionNotImplemented); ok {
+// 				var x [4]byte
+// 				r.Decode(&x)
+// 				// log.Println(err)
+// 				continue
+// 			} else {
+// 				return err
+// 			}
+// 		}
+//
+// 		err = subaction.DecodeSubAction(r, subac)
+// 		if err != nil {
+// 			return err
+// 		}
+//
+// 		subactions = append(subactions, subac)
+// 		switch subac.(type) {
+// 		case *subaction.EndOfScript, *subaction.GoTo, *subaction.SubroutineReturn:
+// 			break subactionloop
+// 		default:
+// 		}
+// 	}
+//
+// 	// a.Subactions.Value = subactions
+// 	a.Subactions.SetValue(subactions)
+// 	_, err = r.Seek(before, io.SeekStart)
+// 	return err
+// }
 
 type ActionTable []Action
 
@@ -108,9 +110,9 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 		return nil
 	}
 	for _, args := range args {
-		if desc, ok := args["descriptor"].(*descriptor.Descriptor); ok {
+		if reloc, ok := args["relocation"].(*Relocation); ok && reloc != nil {
 			offset := Addr(r.CurrentPosition())
-			count = int(desc.Relocation[offset]) / ActionSize
+			count = int((*reloc)[offset]) / ActionSize
 			break
 		} else {
 			logger.Warning.Println("ActionTable needs to be parsed as a part of FighterFile")
@@ -172,18 +174,39 @@ func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
 			newAction.Name = Ptr[NullTerminatedString]{}
 			newAction.Name.SetValue(NullTerminatedString(name))
 			actionsNames[name] = 1
-			newAction.Subactions.Offset = addr
-			newAction.AfterParse(r)
+
+			// before := r.CurrentPosition()
+			_, err := r.Seek(addr.ToSeek(), io.SeekStart)
+			if err != nil {
+				return ""
+			}
+			// var subac subaction.SubActions
+			err = r.Decode(&newAction.Subactions, Args{"offset": addr})
+			if err != nil {
+				fmt.Println(err)
+				panic("Error decoding subactions")
+				return ""
+			}
+			// newAction.Subactions = subac
+			// _, err = r.Seek(before, io.SeekStart)
+			// if err != nil {
+			// 	return ""
+			// }
+			// newAction.Subactions.Offset = addr
+			// newAction.Subactions.SetValue(subac)
+			// newAction.Subactions.Offset = addr
+			// newAction.AfterParse(r)
 			actions = append(actions, newAction)
 			return name
 		}
 
 		// Add subroutines to actions slice
-		for _, subaction := range action.Subactions.GetValue() {
-			switch s := subaction.(type) {
-			case *Subroutine:
+		// for _, subac := range action.Subactions.GetValue() {
+		for _, subac := range action.Subactions {
+			switch s := subac.(type) {
+			case *subaction.Subroutine:
 				s.PointerName = handleSubaction(s.Pointer)
-			case *GoTo:
+			case *subaction.GoTo:
 				s.PointerName = handleSubaction(s.Pointer)
 			default:
 			}

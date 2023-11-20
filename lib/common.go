@@ -3,6 +3,8 @@ package lib
 import (
 	"fmt"
 	"io"
+	"reflect"
+	"unsafe"
 
 	"github.com/Gurvan/melee-data-tools/binread"
 	"github.com/Gurvan/melee-data-tools/logger"
@@ -81,6 +83,15 @@ func (p *Ptr[T]) SetValue(v T) {
 	p.ValuePtr = &v
 }
 
+func IsPtr(x interface{}) bool {
+	t := reflect.TypeOf(x)
+	return t.Kind() == reflect.Struct &&
+		t.NumField() == 2 &&
+		t.Field(0).Name == "Offset" &&
+		t.Field(0).Type.Kind() == reflect.Uint32 &&
+		t.Field(1).Name == "ValuePtr"
+}
+
 var _ binread.BinReader = (*Ptr[uint32])(nil)
 
 func (p *Ptr[T]) BinRead(r *binread.Reader, args ...Args) error {
@@ -134,7 +145,6 @@ func (p *OptionalPtr[T]) BinRead(r *binread.Reader, args ...Args) error {
 			}
 			break
 		}
-
 	}
 
 	if !ok {
@@ -168,6 +178,57 @@ func (p *OptionalPtr[T]) BinRead(r *binread.Reader, args ...Args) error {
 	return nil
 }
 
+type Array[T any] []T
+
+func (a *Array[T]) BinRead(r *binread.Reader, args ...Args) error {
+	var err error
+	var offset Addr
+
+	err = r.Decode(&offset)
+	if err != nil {
+		return err
+	}
+
+	var numElem int
+	for _, args := range args {
+		if reloc, ok := args["relocation"].(*Relocation); ok && reloc != nil {
+			// This section is probably incorrect.
+			// We still need to make the relcation table work properly.
+			var t T
+			elemSize := unsafe.Sizeof(t)
+			if IsPtr(t) {
+				elemSize = unsafe.Sizeof(reflect.ValueOf(t).FieldByName("ValuePtr"))
+			}
+			numElem = int(((*reloc)[offset] - 4) / uint32(elemSize))
+			// fmt.Println("Num elem:", numElem)
+		}
+	}
+
+	before := r.CurrentPosition()
+	_, err = r.Seek(offset.ToSeek(), io.SeekStart)
+	if err != nil {
+		return err
+	}
+
+	elems := make([]T, 0)
+	for i := 0; i < numElem; i++ {
+		var t T
+		err = r.Decode(&t, args...)
+		if err != nil {
+			return err
+		}
+		elems = append(elems, t)
+	}
+
+	_, err = r.Seek(before, io.SeekStart)
+	if err != nil {
+		return err
+	}
+
+	*a = elems
+	return nil
+}
+
 type SizedArray[T any] struct {
 	Data []T
 	Size uint32
@@ -182,25 +243,31 @@ func (a *SizedArray[T]) BinRead(r *binread.Reader, _ ...Args) error {
 		return err
 	}
 
+	if offset == Addr(0x20) {
+		a.Size = 0
+		a.Data = make([]T, a.Size)
+		return nil
+	}
+
 	err = r.Decode(&a.Size)
 	if err != nil {
 		return err
 	}
 
-    before := r.CurrentPosition()
-    _, err = r.Seek(offset.ToSeek(), io.SeekStart)
+	before := r.CurrentPosition()
+	_, err = r.Seek(offset.ToSeek(), io.SeekStart)
 	if err != nil {
 		return err
 	}
 
-    data := make([]T, a.Size)
+	data := make([]T, a.Size)
 	err = r.Decode(&data)
 	if err != nil {
 		return err
 	}
-    a.Data = data
+	a.Data = data
 
-    _, err = r.Seek(before, io.SeekStart)
+	_, err = r.Seek(before, io.SeekStart)
 	if err != nil {
 		return err
 	}

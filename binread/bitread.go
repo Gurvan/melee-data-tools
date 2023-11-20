@@ -94,7 +94,6 @@ func BitRead(bits []Bit, s any, startIndex int) error {
 		r := bytes.NewReader(byts)
 		err := binary.Read(r, binary.BigEndian, value)
 		return any(value), err
-
 	}
 	v := reflect.ValueOf(s)
 	if v.Kind() != reflect.Ptr {
@@ -120,6 +119,12 @@ func BitRead(bits []Bit, s any, startIndex int) error {
 			var value any
 			var err error
 			switch field.Type.Kind() {
+			case reflect.Uint8:
+				var valueLocal uint8
+				value, err = readBits(&valueLocal, p, numbits, false)
+			case reflect.Int8:
+				var valueLocal int8
+				value, err = readBits(&valueLocal, p, numbits, false)
 			case reflect.Uint32:
 				var valueLocal uint32
 				value, err = readBits(&valueLocal, p, numbits, false)

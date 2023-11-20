@@ -4,9 +4,10 @@ import (
 	"os"
 
 	"github.com/Gurvan/melee-data-tools/binread"
-	. "github.com/Gurvan/melee-data-tools/lib"
 	"github.com/Gurvan/melee-data-tools/fighter"
 	"github.com/Gurvan/melee-data-tools/fighter/attributes"
+	"github.com/Gurvan/melee-data-tools/item"
+	. "github.com/Gurvan/melee-data-tools/lib"
 	"github.com/Gurvan/melee-data-tools/logger"
 	"github.com/Gurvan/melee-data-tools/model"
 )
@@ -20,7 +21,7 @@ type FighterData[AS any] struct {
 	Hurtboxes         Ptr[fighter.Hurtboxes]
 	_                 [16]byte
 	ECB               Ptr[fighter.ECB]
-	_                 uint32 // ArticlePointerPtr uint32
+	Items             Array[OptionalPtr[item.Item]]
 	_                 [4]byte
 	JostleBox         Ptr[fighter.JostleBox]
 	_                 [8]byte

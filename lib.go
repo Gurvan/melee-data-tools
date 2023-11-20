@@ -18,8 +18,7 @@ type File[T any] struct {
 }
 
 func (f *File[T]) BinRead(r *binread.Reader, args ...Args) error {
-	var err error
-	err = r.Decode(&f.Desc)
+	err := r.Decode(&f.Desc)
 	if err != nil {
 		return err
 	}
@@ -28,12 +27,12 @@ func (f *File[T]) BinRead(r *binread.Reader, args ...Args) error {
 	if len(args) > 0 {
 		argsForData = args[0]
 		argsForData["descriptor"] = &f.Desc
+		argsForData["relocation"] = &f.Desc.Relocation
 	} else {
-		argsForData = Args{"descriptor": &f.Desc}
+		argsForData = Args{"descriptor": &f.Desc, "relocation": &f.Desc.Relocation}
 	}
 
-	err = r.Decode(&f.Data, argsForData)
-	return nil
+	return r.Decode(&f.Data, argsForData)
 }
 
 func (f *File[T]) AfterParse(r *binread.Reader, _ ...Args) error {
@@ -71,15 +70,15 @@ func (f *File[T]) AfterParse(r *binread.Reader, _ ...Args) error {
 			return errors.New(fmt.Sprintf("File first root %s does not belong to player common file.\n", firstRoot))
 		}
 	case StageData:
-        if _, err = f.Desc.FindRootOffset("coll_data"); err != nil {
-            return errors.New(fmt.Sprintf("Couldn't parse file as stage file. Error: %s\n", err))
-        }
-        if _, err = f.Desc.FindRootOffset("map_head"); err != nil {
-            return errors.New(fmt.Sprintf("Couldn't parse file as stage file. Error: %s\n", err))
-        }
-        if _, err = f.Desc.FindRootOffset("grGroundParam"); err != nil {
-            return errors.New(fmt.Sprintf("Couldn't parse file as stage file. Error: %s\n", err))
-        }
+		if _, err = f.Desc.FindRootOffset("coll_data"); err != nil {
+			return errors.New(fmt.Sprintf("Couldn't parse file as stage file. Error: %s\n", err))
+		}
+		if _, err = f.Desc.FindRootOffset("map_head"); err != nil {
+			return errors.New(fmt.Sprintf("Couldn't parse file as stage file. Error: %s\n", err))
+		}
+		if _, err = f.Desc.FindRootOffset("grGroundParam"); err != nil {
+			return errors.New(fmt.Sprintf("Couldn't parse file as stage file. Error: %s\n", err))
+		}
 	}
 
 	return nil
@@ -87,10 +86,10 @@ func (f *File[T]) AfterParse(r *binread.Reader, _ ...Args) error {
 
 func (f *File[T]) ReadFromFile(path string) (T, descriptor.Descriptor, error) {
 	fileData, err := os.Open(path)
-	defer fileData.Close()
 	if err != nil {
 		return f.Data, f.Desc, err
 	}
+	defer fileData.Close()
 	reader := binread.NewReader(fileData)
 	if err = reader.Decode(f); err != nil {
 		return f.Data, f.Desc, err
