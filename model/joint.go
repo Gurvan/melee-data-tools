@@ -19,6 +19,7 @@ type Vec3[T any] struct {
 }
 
 type Joint struct {
+	Index       int32 `binread:"ignore"`
 	Name        OptionalPtr[NullTerminatedString]
 	Flags       Flags
 	Child       OptionalPtr[Joint]

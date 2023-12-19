@@ -73,20 +73,25 @@ func (r *Reader) DecodePeek(data any, args ...Args) error {
 
 func unmarshal(r *Reader, data any, args ...Args) error {
 	rv := reflect.ValueOf(data)
+	rt := reflect.TypeOf(data)
 
 	var v reflect.Value
+	var t reflect.Type
 	switch {
 	case rv.Kind() == reflect.Ptr:
 		if rv.IsNil() {
 			return nil
 		}
 		v = rv.Elem()
+		t = rt.Elem()
 	default:
 		v = rv
+		t = rt
 	}
 
 	if v.Kind() == reflect.Interface {
 		v = v.Elem()
+		t = rt.Elem()
 	}
 
 	var err error
@@ -113,6 +118,11 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 		case reflect.Struct:
 			printlnDebug("Struct:", v.NumField())
 			for i := 0; i < v.NumField(); i++ {
+				if bit, ok := t.Field(i).Tag.Lookup("binread"); ok {
+					if bit == "-" || bit == "ignore" {
+						continue
+					}
+				}
 				field := reflect.New(v.Field(i).Type()).Interface()
 				err = unmarshal(r, field, args...)
 				if err != nil {
@@ -163,5 +173,4 @@ func unmarshal(r *Reader, data any, args ...Args) error {
 	}
 
 	return nil
-
 }

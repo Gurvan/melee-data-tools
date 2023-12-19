@@ -9,9 +9,9 @@ type Fc struct {
 	_       uint32  // 0x0C
 	_       uint32  // 0x10
 	Unk0x14 float32 // 0x14
+	Unk0x18 uint32
 	Unk0x1C uint32
 	Unk0x20 uint32
-	_       uint32
 	_       uint32
 	_       uint32
 	_       uint32
