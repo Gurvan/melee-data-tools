@@ -280,7 +280,7 @@ func (AllowInterrupt) isSubaction() {}
 
 // 0x18
 type ProjectileFlag struct {
-	_ uint32 `bit:"26"`
+	Flag uint32 `bit:"26"`
 }
 
 func (ProjectileFlag) isSubaction() {}
