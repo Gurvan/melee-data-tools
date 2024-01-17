@@ -101,10 +101,16 @@ func (s *States) BinRead(r *binread.Reader, args ...Args) error {
 		return err
 	}
 
+	if args == nil {
+		args = make([]Args, 1)
+		args[0] = make(Args)
+	}
+	args[0]["isItem"] = true
+
 	states := make([]State, 0)
 	for i := 0; i < numElem; i++ {
 		var state State
-		err = r.Decode(&state)
+		err = r.Decode(&state, args...)
 		if err != nil {
 			return err
 		}

@@ -578,7 +578,46 @@ type WindEffect struct {
 
 func (WindEffect) isSubaction() {}
 
-func subactionTypeSwitch(i uint8) (SubAction, error) {
+// Item Specific (include projectiles, etc)
+
+// 0x0B
+type CreateHitboxItem struct {
+	ID                   uint32 `bit:"3"`
+	_                    uint32 `bit:"3"`
+	BoneId               uint32 `bit:"7"`
+	Damage               uint32 `bit:"13"`
+	Size                 uint32 `bit:"16"`
+	Z                    int32  `bit:"16"`
+	Y                    int32  `bit:"16"`
+	X                    int32  `bit:"16"`
+	Angle                uint32 `bit:"9"`
+	KnockbackGrowth      uint32 `bit:"9"`
+	SetKnockback         uint32 `bit:"9"`
+	_                    uint32 `bit:"5"`
+	BaseKnockback        uint32 `bit:"9"`
+	Element              uint32 `bit:"5"`
+	Clank                bool   `bit:"1"`
+	ShieldDamage         int32  `bit:"8"`
+	HitSFXSeverity       uint32 `bit:"3"`
+	HitSFXKind           uint32 `bit:"4"`
+	HitGroundedFighters  bool   `bit:"1"`
+	HitAirBorneFighters  bool   `bit:"1"`
+	HitCooldown          uint32 `bit:"8"`
+	TimedRehitNonFighter bool   `bit:"1"`
+	TimedRehitFighter    bool   `bit:"1"`
+	TimedRehitShield     bool   `bit:"1"`
+	Reflectable          bool   `bit:"1"`
+	Absorbable           bool   `bit:"1"`
+	Shieldable           bool   `bit:"1"`
+	_                    bool   `bit:"1"`
+	Deflectable          bool   `bit:"1"`
+	Reflectable2         bool   `bit:"1"`
+	_                    uint32 `bit:"15"`
+}
+
+func (CreateHitboxItem) isSubaction() {}
+
+func subactionTypeSwitch(i uint8, isItem bool) (SubAction, error) {
 	switch i {
 	case 0x00:
 		return &EndOfScript{}, nil
@@ -603,6 +642,9 @@ func subactionTypeSwitch(i uint8) (SubAction, error) {
 	case 0x0A:
 		return &GraphicEffect{}, nil
 	case 0x0B:
+		if isItem {
+			return &CreateHitboxItem{}, nil
+		}
 		return &CreateHitbox{}, nil
 	case 0x0C:
 		return &AdjusteHitboxDamage{}, nil
@@ -703,12 +745,12 @@ func subactionTypeSwitch(i uint8) (SubAction, error) {
 	}
 }
 
-func GetSubActionType(r *binread.Reader) (SubAction, error) {
+func GetSubActionType(r *binread.Reader, isItem bool) (SubAction, error) {
 	b, err := r.Peek(1)
 	if err != nil {
 		return &emptySubAction{}, err
 	}
-	return subactionTypeSwitch(uint8(b[0]) >> 2)
+	return subactionTypeSwitch(uint8(b[0])>>2, isItem)
 }
 
 func DecodeSubAction(r *binread.Reader, s SubAction) error {
@@ -737,11 +779,25 @@ func (a *SubActions) BinRead(r *binread.Reader, args ...Args) error {
 	var offset Addr
 	var err error
 
+	isItem := false
+
 	ok := false
 	for _, args := range args {
-		offset, ok = args["offset"].(Addr)
-		if ok {
-			break
+		offset_, ok_ := args["offset"].(Addr)
+		if ok_ {
+			offset = offset_
+			ok = true
+			continue
+		}
+		// offset_, ok := args["offset"].(Addr)
+		// if ok {
+		// 	offset = offset_
+		// 	continue
+		// }
+		isItem_, ok_ := args["isItem"].(bool)
+		if ok_ {
+			isItem = isItem_
+			continue
 		}
 	}
 
@@ -762,7 +818,7 @@ func (a *SubActions) BinRead(r *binread.Reader, args ...Args) error {
 
 subactionloop:
 	for {
-		subac, err := GetSubActionType(r)
+		subac, err := GetSubActionType(r, isItem)
 		if err != nil {
 			if _, ok := err.(*SubActionNotImplemented); ok {
 				var x [4]byte
