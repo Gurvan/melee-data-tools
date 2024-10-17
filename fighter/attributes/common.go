@@ -2,8 +2,8 @@ package attributes
 
 import (
 	"github.com/Gurvan/melee-data-tools/binread"
-	"github.com/Gurvan/melee-data-tools/lib"
 	"github.com/Gurvan/melee-data-tools/helpers"
+	"github.com/Gurvan/melee-data-tools/lib"
 )
 
 type ThrowFlags struct {
@@ -48,8 +48,8 @@ type Common struct {
 	JumpGroundSpeedConservation     float32
 	JumpStartSpeedMax               float32
 	JumpShortSpeedVertical          float32
-	JumpAirStartSpeedRelative       float32
 	JumpAirSpeedVerticalMultiplier  float32
+	JumpAirStartSpeedRelative       float32
 	JumpNum                         uint32
 	Gravity                         float32
 	FallSlowSpeedVerticalMax        float32
@@ -119,7 +119,7 @@ type Common struct {
 	_                               float32
 	_                               float32
 	_                               float32
-	_                               float32
+	_                               int32
 	_                               float32
 	_                               float32
 	_                               float32

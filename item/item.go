@@ -46,17 +46,17 @@ type ECB struct {
 }
 
 type Attributes struct {
-	Flags               ItemFlags
-	ThrowSpeedMultipler float32
-	_                   float32
-	SpinSpeed           float32
-	FallAcceleration    float32
-	MaxFallSpeed        float32
-	_                   [10]float32 // Unk0x18
-	ECB                 ECB
-	_                   [4]float32 // Unk0x50
-	ModelScale          float32
-	_                   [8]int32 // SFXs
+	Flags                ItemFlags
+	ThrowSpeedMultiplier float32
+	_                    float32
+	SpinSpeed            float32
+	FallAcceleration     float32
+	MaxFallSpeed         float32
+	_                    [10]float32 // Unk0x18
+	ECB                  ECB
+	_                    [4]float32 // Unk0x50
+	ModelScale           float32
+	_                    [8]int32 // SFXs
 }
 
 type Hurtbox struct {
