@@ -21,11 +21,12 @@ type FighterData[AS any] struct {
 	Hurtboxes         Ptr[fighter.Hurtboxes]
 	_                 [16]byte
 	ECB               Ptr[fighter.ECB]
-	Items             Array[OptionalPtr[item.Item]]
-	_                 [4]byte
-	JostleBox         Ptr[fighter.JostleBox]
-	_                 [8]byte
-	Model             Ptr[model.Joint]
+	// Items             Array[OptionalPtr[item.Item]]
+	Items     Ptr[[4]OptionalPtr[item.Item]]
+	_         [4]byte
+	JostleBox Ptr[fighter.JostleBox]
+	_         [8]byte
+	Model     Ptr[model.Joint]
 }
 
 type FighterFile = File[FighterData[any]]
