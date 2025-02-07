@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"unsafe"
 
 	"github.com/Gurvan/melee-data-tools/binread"
 	"github.com/Gurvan/melee-data-tools/logger"
@@ -178,56 +177,56 @@ func (p *OptionalPtr[T]) BinRead(r *binread.Reader, args ...Args) error {
 	return nil
 }
 
-type Array[T any] []T
-
-func (a *Array[T]) BinRead(r *binread.Reader, args ...Args) error {
-	var err error
-	var offset Addr
-
-	err = r.Decode(&offset)
-	if err != nil {
-		return err
-	}
-
-	var numElem int
-	for _, args := range args {
-		if reloc, ok := args["relocation"].(*Relocation); ok && reloc != nil {
-			// This section is probably incorrect.
-			// We still need to make the relcation table work properly.
-			var t T
-			elemSize := unsafe.Sizeof(t)
-			if IsPtr(t) {
-				elemSize = unsafe.Sizeof(reflect.ValueOf(t).FieldByName("ValuePtr"))
-			}
-			numElem = int(((*reloc)[offset] - 4) / uint32(elemSize))
-			// fmt.Println("Num elem:", numElem)
-		}
-	}
-
-	before := r.CurrentPosition()
-	_, err = r.Seek(offset.ToSeek(), io.SeekStart)
-	if err != nil {
-		return err
-	}
-
-	elems := make([]T, 0)
-	for i := 0; i < numElem; i++ {
-		var t T
-		err = r.Decode(&t, args...)
-		if err != nil {
-			return err
-		}
-		elems = append(elems, t)
-	}
-
-	_, err = r.Seek(before, io.SeekStart)
-	if err != nil {
-		return err
-	}
-
-	*a = elems
-	return nil
-}
+// type Array[T any] []T
+//
+// func (a *Array[T]) BinRead(r *binread.Reader, args ...Args) error {
+// 	var err error
+// 	var offset Addr
+//
+// 	err = r.Decode(&offset)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	var numElem int
+// 	for _, args := range args {
+// 		if reloc, ok := args["relocation"].(*Relocation); ok && reloc != nil {
+// 			// This section is probably incorrect.
+// 			// We still need to make the relcation table work properly.
+// 			var t T
+// 			elemSize := unsafe.Sizeof(t)
+// 			if IsPtr(t) {
+// 				elemSize = 4
+// 			}
+// 			numElem = int((*reloc)[offset] / uint32(elemSize))
+// 			fmt.Println("Num elem:", numElem)
+// 		}
+// 	}
+//
+// 	before := r.CurrentPosition()
+// 	_, err = r.Seek(offset.ToSeek(), io.SeekStart)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	elems := make([]T, 0)
+// 	for i := 0; i < numElem; i++ {
+// 		var t T
+// 		err = r.Decode(&t, args...)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		elems = append(elems, t)
+// 	}
+//
+// 	_, err = r.Seek(before, io.SeekStart)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	*a = elems
+// 	return nil
+// }
 
 type SizedArray[T any] struct {
 	Data []T

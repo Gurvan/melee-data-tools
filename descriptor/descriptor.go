@@ -143,11 +143,6 @@ func (d *Descriptor) BinRead(r *binread.Reader, _ ...Args) error {
 		return err
 	}
 
-	_, err = r.Seek(d.RelocationOffset.ToSeek(), io.SeekStart)
-	if err != nil {
-		return err
-	}
-
 	relocArgs := Args{"offset": d.RelocationOffset, "count": d.RelocationCount}
 	err = r.Decode(&d.Relocation, relocArgs)
 	if err != nil {
