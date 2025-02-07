@@ -41,7 +41,7 @@ func (f *File[T]) AfterParse(r *binread.Reader, _ ...Args) error {
 
 	// Check for correct file format
 	switch any(f.Data).(type) {
-	case FighterData[any]:
+	case FighterData:
 		if firstRoot, err = f.Desc.FirstRootName(); err != nil {
 			return err
 		}

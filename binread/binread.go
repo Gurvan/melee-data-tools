@@ -48,6 +48,13 @@ func (r *Reader) ReadAt(offset int64) error {
 	return nil
 }
 
+func (r *Reader) Size() int64 {
+	before := r.CurrentPosition()
+	pos, _ := r.Seek(0, io.SeekEnd)
+	r.Seek(before, io.SeekStart)
+	return pos
+}
+
 type BinReader interface {
 	BinRead(*Reader, ...Args) error
 }

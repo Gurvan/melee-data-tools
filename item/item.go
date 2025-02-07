@@ -1,9 +1,13 @@
 package item
 
 import (
+	"errors"
+	"fmt"
 	"io"
+	"strings"
 
 	"github.com/Gurvan/melee-data-tools/binread"
+	"github.com/Gurvan/melee-data-tools/descriptor"
 	. "github.com/Gurvan/melee-data-tools/lib"
 	"github.com/Gurvan/melee-data-tools/model"
 	"github.com/Gurvan/melee-data-tools/subaction"
@@ -130,4 +134,76 @@ type Model struct {
 	BoneCount    int32
 	BoneAttachID int32
 	BitField     int32
+}
+
+type Items []Item
+
+func (a *Items) BinRead(r *binread.Reader, args ...Args) error {
+	var err error
+	var offset Addr
+
+	err = r.Decode(&offset)
+	if err != nil {
+		return err
+	}
+
+	before := r.CurrentPosition()
+	_, err = r.Seek(offset.ToSeek(), io.SeekStart)
+	if err != nil {
+		return err
+	}
+
+	var firstRoot string
+	for _, args := range args {
+		if desc, ok := args["descriptor"].(*descriptor.Descriptor); ok {
+			if firstRoot, err = desc.FirstRootName(); err != nil {
+				return err
+			}
+			break
+		}
+	}
+
+	indices, err := fighterSwitch(firstRoot)
+	if err != nil {
+		return err
+	}
+
+	startPos := r.CurrentPosition()
+
+	items := make([]Item, 0)
+	for _, i := range indices {
+		var t OptionalPtr[Item]
+		_, err := r.Seek(startPos+int64(i)*0x4, io.SeekStart)
+		err = r.Decode(&t, args...)
+		if err != nil {
+			return err
+		}
+		if t.ValuePtr == nil {
+			continue
+		}
+		items = append(items, *t.ValuePtr)
+	}
+
+	_, err = r.Seek(before, io.SeekStart)
+	if err != nil {
+		return err
+	}
+
+	*a = items
+	return nil
+}
+
+func fighterSwitch(firstRoot string) ([]int, error) {
+	name := strings.TrimPrefix(firstRoot, "ftData")
+	if name == firstRoot {
+		return nil, errors.New(fmt.Sprintf("File first root %s does not belong to fighter data file.\n", firstRoot))
+	}
+	switch name {
+	case "Fox":
+		return []int{0, 1, 2}, nil
+	case "Falco":
+		return []int{0, 1, 3}, nil
+	default:
+		return []int{}, nil
+	}
 }

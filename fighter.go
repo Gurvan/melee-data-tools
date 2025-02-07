@@ -12,7 +12,7 @@ import (
 	"github.com/Gurvan/melee-data-tools/model"
 )
 
-type FighterData[AS any] struct {
+type FighterData struct {
 	AttributesCommon  Ptr[attributes.Common]
 	AttributesSpecial Ptr[attributes.Special]
 	ModelParams       Ptr[attributes.ModelParams]
@@ -21,17 +21,16 @@ type FighterData[AS any] struct {
 	Hurtboxes         Ptr[fighter.Hurtboxes]
 	_                 [16]byte
 	ECB               Ptr[fighter.ECB]
-	// Items             Array[OptionalPtr[item.Item]]
-	Items     Ptr[[4]OptionalPtr[item.Item]]
-	_         [4]byte
-	JostleBox Ptr[fighter.JostleBox]
-	_         [8]byte
-	Model     Ptr[model.Joint]
+	Items             item.Items
+	_                 [4]byte
+	JostleBox         Ptr[fighter.JostleBox]
+	_                 [8]byte
+	Model             Ptr[model.Joint]
 }
 
-type FighterFile = File[FighterData[any]]
+type FighterFile = File[FighterData]
 
-func (f *FighterData[any]) AfterParse(r *binread.Reader, _ ...Args) error {
+func (f *FighterData) AfterParse(r *binread.Reader, _ ...Args) error {
 	if f.Model.ValuePtr == nil {
 		return nil
 	}
@@ -43,7 +42,7 @@ func (f *FighterData[any]) AfterParse(r *binread.Reader, _ ...Args) error {
 	return nil
 }
 
-func (f *FighterData[AS]) ParseAnimation(animationPath string) error {
+func (f *FighterData) ParseAnimation(animationPath string) error {
 	var err error
 	var file *os.File
 	var animationFilesAsBytes [][]byte
@@ -78,14 +77,13 @@ func (f *FighterData[AS]) ParseAnimation(animationPath string) error {
 		if animationData, ok := animations[offset]; !ok {
 			logger.Warning.Printf("Animation 0x%X not found.", offset)
 		} else {
-			// f.ActionTable.Value[i].Animation.Value = animationData
 			f.ActionTable.GetValue()[i].Animation.SetValue(animationData)
 		}
 	}
 	return nil
 }
 
-func (f *FighterData[AS]) ParseModel(modelPath string) error {
+func (f *FighterData) ParseModel(modelPath string) error {
 	var modelFile ModelFile
 
 	modelData, desc, err := modelFile.ReadFromFile(modelPath)
