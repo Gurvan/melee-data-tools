@@ -820,13 +820,14 @@ subactionloop:
 	for {
 		subac, err := GetSubActionType(r, isItem)
 		if err != nil {
-			if _, ok := err.(*SubActionNotImplemented); ok {
-				var x [4]byte
-				r.Decode(&x)
-				continue
-			} else {
-				return err
-			}
+			return err
+			// if _, ok := err.(*SubActionNotImplemented); ok {
+			// 	var x [4]byte
+			// 	r.Decode(&x)
+			// 	continue
+			// } else {
+			// 	return err
+			// }
 		}
 
 		err = DecodeSubAction(r, subac)
