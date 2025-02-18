@@ -15,11 +15,15 @@ type emptySubAction struct{}
 func (emptySubAction) isSubaction() {}
 
 type SubActionNotImplemented struct {
-	Id uint8
+	Id     uint8
+	IsItem bool
 }
 
 func (e *SubActionNotImplemented) Error() string {
-	return fmt.Sprintf("SubAction 0x%X is not implemented", e.Id)
+	if e.IsItem {
+		return fmt.Sprintf("Item SubAction 0x%X is not implemented", e.Id)
+	}
+	return fmt.Sprintf("Fighter SubAction 0x%X is not implemented", e.Id)
 }
 
 type SubAction interface {
@@ -185,20 +189,20 @@ type CreateHitbox struct {
 func (CreateHitbox) isSubaction() {}
 
 // 0x0C
-type AdjusteHitboxDamage struct {
+type UpdateHitboxDamage struct {
 	ID     uint32 `bit:"3"`
 	Damage uint32 `bit:"23"`
 }
 
-func (AdjusteHitboxDamage) isSubaction() {}
+func (UpdateHitboxDamage) isSubaction() {}
 
 // 0x0D
-type AdjusteHitboxSize struct {
+type UpdateHitboxSize struct {
 	ID   uint32 `bit:"3"`
 	Size uint32 `bit:"23"`
 }
 
-func (AdjusteHitboxSize) isSubaction() {}
+func (UpdateHitboxSize) isSubaction() {}
 
 // 0x0E
 type SetHitboxHitGroundAir struct {
@@ -617,7 +621,20 @@ type CreateHitboxItem struct {
 
 func (CreateHitboxItem) isSubaction() {}
 
+type Unknown0x0FItem struct {
+	_ uint32 `bit:"26"`
+}
+
+func (Unknown0x0FItem) isSubaction() {}
+
 func subactionTypeSwitch(i uint8, isItem bool) (SubAction, error) {
+	if isItem {
+		return itemSubactionTypeSwitch(i)
+	}
+	return fighterSubactionTypeSwitch(i)
+}
+
+func fighterSubactionTypeSwitch(i uint8) (SubAction, error) {
 	switch i {
 	case 0x00:
 		return &EndOfScript{}, nil
@@ -642,14 +659,11 @@ func subactionTypeSwitch(i uint8, isItem bool) (SubAction, error) {
 	case 0x0A:
 		return &GraphicEffect{}, nil
 	case 0x0B:
-		if isItem {
-			return &CreateHitboxItem{}, nil
-		}
 		return &CreateHitbox{}, nil
 	case 0x0C:
-		return &AdjusteHitboxDamage{}, nil
+		return &UpdateHitboxDamage{}, nil
 	case 0x0D:
-		return &AdjusteHitboxSize{}, nil
+		return &UpdateHitboxSize{}, nil
 	case 0x0E:
 		return &SetHitboxHitGroundAir{}, nil
 	case 0x0F:
@@ -741,16 +755,61 @@ func subactionTypeSwitch(i uint8, isItem bool) (SubAction, error) {
 	case 0x3A:
 		return &WindEffect{}, nil
 	default:
-		return &emptySubAction{}, &SubActionNotImplemented{Id: i}
+		return &emptySubAction{}, &SubActionNotImplemented{Id: i, IsItem: false}
+	}
+}
+
+func itemSubactionTypeSwitch(i uint8) (SubAction, error) {
+	switch i {
+	case 0x00:
+		return &EndOfScript{}, nil
+	case 0x01:
+		return &SynchronousTimer{}, nil
+	case 0x02:
+		return &AsynchronousTimer{}, nil
+	case 0x03:
+		return &SetLoop{}, nil
+	case 0x04:
+		return &ExecuteLoop{}, nil
+	case 0x05:
+		return &Subroutine{}, nil
+	case 0x06:
+		return &SubroutineReturn{}, nil
+	case 0x07:
+		return &GoTo{}, nil
+	case 0x08:
+		return &SetTimerAnimation{}, nil
+	case 0x09:
+		return &Unknown0x09{}, nil
+	case 0x0B:
+		return &CreateHitboxItem{}, nil
+	case 0x0C:
+		return &UpdateHitboxDamage{}, nil
+	case 0x0D:
+		return &UpdateHitboxSize{}, nil
+	case 0x0E:
+		return &RemoveHitbox{}, nil
+	case 0x0F:
+		return &Unknown0x0FItem{}, nil
+	default:
+		return &emptySubAction{}, &SubActionNotImplemented{Id: i, IsItem: true}
 	}
 }
 
 func GetSubActionType(r *binread.Reader, isItem bool) (SubAction, error) {
+	enrichError := func(subac SubAction, err error) (SubAction, error) {
+		errMsg := fmt.Sprintf("GetSubActionType(Offset:0x%X): ", r.CurrentPosition())
+		return subac, fmt.Errorf(errMsg+"%w", err)
+	}
 	b, err := r.Peek(1)
 	if err != nil {
-		return &emptySubAction{}, err
+		return enrichError(&emptySubAction{}, err)
 	}
-	return subactionTypeSwitch(uint8(b[0])>>2, isItem)
+	subactionType, err := subactionTypeSwitch(uint8(b[0])>>2, isItem)
+	if err != nil {
+		return enrichError(subactionType, err)
+	}
+	return subactionType, nil
 }
 
 func DecodeSubAction(r *binread.Reader, s SubAction) error {
@@ -820,13 +879,13 @@ subactionloop:
 	for {
 		subac, err := GetSubActionType(r, isItem)
 		if err != nil {
-			return err
+			return fmt.Errorf("Subactions(Offset:0x%X): %w", offset.ToSeek(), err)
 			// if _, ok := err.(*SubActionNotImplemented); ok {
 			// 	var x [4]byte
 			// 	r.Decode(&x)
 			// 	continue
 			// } else {
-			// 	return err
+			// 	return enrichError(err)
 			// }
 		}
 

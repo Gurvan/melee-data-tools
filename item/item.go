@@ -116,7 +116,7 @@ func (s *States) BinRead(r *binread.Reader, args ...Args) error {
 		var state State
 		err = r.Decode(&state, args...)
 		if err != nil {
-			return err
+			return fmt.Errorf("State(Index:%d): %w", i, err)
 		}
 		states = append(states, state)
 	}
@@ -176,7 +176,7 @@ func (a *Items) BinRead(r *binread.Reader, args ...Args) error {
 		_, err := r.Seek(startPos+int64(i)*0x4, io.SeekStart)
 		err = r.Decode(&t, args...)
 		if err != nil {
-			return err
+			return fmt.Errorf("Item(Index:%d): %w", i, err)
 		}
 		if t.ValuePtr == nil {
 			continue
