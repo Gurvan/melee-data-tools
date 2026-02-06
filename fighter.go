@@ -1,6 +1,7 @@
 package mdt
 
 import (
+	"bytes"
 	"os"
 
 	"github.com/Gurvan/melee-data-tools/binread"
@@ -42,19 +43,24 @@ func (f *FighterData) AfterParse(r *binread.Reader, _ ...Args) error {
 	return nil
 }
 
-func (f *FighterData) ParseAnimation(animationPath string) error {
-	var err error
-	var file *os.File
-	var animationFilesAsBytes [][]byte
-	var offsets []int64
-
-	if file, err = os.Open(animationPath); err != nil {
+func (f *FighterData) ParseAnimationFromFile(animationPath string) error {
+	file, err := os.Open(animationPath)
+	if err != nil {
 		return err
 	}
 	defer file.Close()
 	r := binread.NewReader(file)
+	return f.parseAnimation(r)
+}
 
-	if animationFilesAsBytes, offsets, err = SplitAnimationFile(r); err != nil {
+func (f *FighterData) ParseAnimationFromBytes(data []byte) error {
+	r := binread.NewReader(bytes.NewReader(data))
+	return f.parseAnimation(r)
+}
+
+func (f *FighterData) parseAnimation(r binread.Reader) error {
+	animationFilesAsBytes, offsets, err := SplitAnimationFile(r)
+	if err != nil {
 		return err
 	}
 
@@ -83,10 +89,25 @@ func (f *FighterData) ParseAnimation(animationPath string) error {
 	return nil
 }
 
-func (f *FighterData) ParseModel(modelPath string) error {
+func (f *FighterData) ParseModelFromFile(modelPath string) error {
 	var modelFile ModelFile
 
 	modelData, desc, err := modelFile.ReadFromFile(modelPath)
+	if err != nil {
+		return err
+	}
+	if firstRoot, err := desc.FirstRootName(); err == nil {
+		modelData.UpdateName(firstRoot)
+	}
+
+	f.Model.SetValue(modelData.Joint)
+	return nil
+}
+
+func (f *FighterData) ParseModelFromBytes(data []byte) error {
+	var modelFile ModelFile
+
+	modelData, desc, err := modelFile.ReadFromBytes(data)
 	if err != nil {
 		return err
 	}
