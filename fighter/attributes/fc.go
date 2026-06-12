@@ -1,6 +1,6 @@
 package attributes
 
-// . "github.com/Gurvan/melee-data-tools/lib"
+import "github.com/Gurvan/melee-data-tools/helpers"
 
 type Fc struct {
 	_                    uint32  // 0x00
@@ -40,6 +40,6 @@ type Fc struct {
 	_                    uint32
 }
 
-// func (a Fc) String() string {
-// 	return helpers.PrettyString(a)
-// }
+func (a Fc) String() string {
+	return helpers.PrettyString(a)
+}

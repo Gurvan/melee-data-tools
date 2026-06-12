@@ -29,6 +29,10 @@ func fighterSwitch(firstRoot string) (any, error) {
 		return any(&Ca{}), nil
 	case "Falco":
 		return any(&Fc{}), nil
+	case "Purin":
+		return any(&Pr{}), nil
+	case "Mars":
+		return any(&Ms{}), nil
 	default:
 		return any(&UnimplementedSpecialAttributes{}), nil
 	}
