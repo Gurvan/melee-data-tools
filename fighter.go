@@ -18,7 +18,9 @@ type FighterData struct {
 	AttributesSpecial Ptr[attributes.Special]
 	ModelParams       Ptr[attributes.ModelParams]
 	ActionTable       Ptr[fighter.ActionTable]
-	_                 [32]byte
+	_                 [16]byte
+	ShieldPose        Ptr[ShieldPose]
+	_                 [12]byte
 	Hurtboxes         Ptr[fighter.Hurtboxes]
 	_                 [16]byte
 	ECB               Ptr[fighter.ECB]
@@ -27,6 +29,25 @@ type FighterData struct {
 	JostleBox         Ptr[fighter.JostleBox]
 	_                 [8]byte
 	Model             Ptr[model.Joint]
+}
+
+type ShieldPose struct {
+	Root    OptionalPtr[model.Joint]
+	Unknown Addr
+}
+
+func (s *ShieldPose) BinRead(r *binread.Reader, args ...Args) error {
+	if err := r.Decode(&s.Root, args...); err != nil {
+		return err
+	}
+	return r.Decode(&s.Unknown)
+}
+
+func (s *ShieldPose) Joint() *model.Joint {
+	if s == nil || s.Root.ValuePtr == nil {
+		return nil
+	}
+	return s.Root.ValuePtr.Child.ValuePtr
 }
 
 type FighterFile = File[FighterData]

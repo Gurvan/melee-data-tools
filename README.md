@@ -25,6 +25,8 @@ The interactive menu lets you inspect sections such as:
 - `jostle`
 - `items`
 - `actions`
+- `shield-pose`
+- `animations`
 - `subactions`
 - `model`
 
@@ -34,6 +36,14 @@ For scripted use, list or print sections directly:
 go run ./cmd/fighter-review -list -- /path/to/PlMs.dat
 go run ./cmd/fighter-review -section special -- /path/to/PlMs.dat
 ```
+
+For a fighter file named like `PlMs.dat`, the tool automatically tries to load `PlMsAJ.dat` from the same directory. You can also use `-animations` to provide the fighter animation bundle explicitly:
+
+```sh
+go run ./cmd/fighter-review -animations /path/to/PlMsAJ.dat -section animations -- /path/to/PlMs.dat
+```
+
+If no animation bundle is found, the `animations` section lists only the animation offsets referenced by actions in the fighter data file.
 
 ### Special Attribute Generation
 

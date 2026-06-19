@@ -16,9 +16,11 @@ import (
 	"strings"
 
 	mdt "github.com/Gurvan/melee-data-tools"
+	"github.com/Gurvan/melee-data-tools/binread"
 	"github.com/Gurvan/melee-data-tools/descriptor"
 	"github.com/Gurvan/melee-data-tools/fighter"
 	"github.com/Gurvan/melee-data-tools/lib"
+	"github.com/Gurvan/melee-data-tools/model"
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -28,9 +30,24 @@ type section struct {
 	body  func() string
 }
 
+type reviewAnimation struct {
+	Index  int
+	Offset int64
+	Size   int
+	Root   string
+	Data   mdt.AnimationData
+}
+
+type actionAnimationRef struct {
+	Index int
+	Name  string
+	Size  uint32
+}
+
 func main() {
 	sectionKey := flag.String("section", "", "print one section and exit")
 	listSections := flag.Bool("list", false, "list available sections and exit")
+	animationPath := flag.String("animations", "", "parse a fighter animation bundle and list all animations, such as PlMsAJ.dat")
 	writeSpecial := flag.Bool("write-special", false, "create or overwrite fighter/attributes/<id>.go and update special.go")
 	specialID := flag.String("special-id", "", "Go type/file id for -write-special, such as Fc, Pr, or Ca")
 	specialType := flag.String("special-type", "auto", "field type for generated unknown attributes: auto, uint32, int32, float32, or Hex32")
@@ -65,13 +82,24 @@ Options:
 		return
 	}
 
+	var animations []reviewAnimation
+	if path, required := resolveAnimationPath(path, *animationPath); path != "" {
+		animations, err = readAnimationBundle(path)
+		if err != nil {
+			if required {
+				log.Fatalf("Could not parse %s as animation bundle: %v", path, err)
+			}
+			log.Printf("Could not parse inferred animation bundle %s: %v", path, err)
+		}
+	}
+
 	if *sectionKey == "" && !*listSections {
 		if err := maybeOfferWriteSpecial(path, fighterData, desc, *specialType); err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	sections := buildSections(path, fighterData, desc)
+	sections := buildSections(path, fighterData, desc, animations)
 	if *listSections {
 		for _, section := range sections {
 			fmt.Printf("%-16s %s\n", section.key, section.title)
@@ -100,7 +128,29 @@ func expandHome(path string) string {
 	return path
 }
 
-func buildSections(path string, data mdt.FighterData, desc descriptor.Descriptor) []section {
+func resolveAnimationPath(fighterPath string, animationPath string) (string, bool) {
+	if animationPath != "" {
+		return expandHome(animationPath), true
+	}
+
+	inferred := inferAnimationPathFromFighterPath(fighterPath)
+	if inferred == "" || !fileExists(inferred) {
+		return "", false
+	}
+	return inferred, false
+}
+
+func inferAnimationPathFromFighterPath(fighterPath string) string {
+	dir := filepath.Dir(fighterPath)
+	name := filepath.Base(fighterPath)
+	matches := regexp.MustCompile(`(?i)^(Pl[A-Za-z0-9]{2})\.dat$`).FindStringSubmatch(name)
+	if len(matches) != 2 {
+		return ""
+	}
+	return filepath.Join(dir, matches[1]+"AJ.dat")
+}
+
+func buildSections(path string, data mdt.FighterData, desc descriptor.Descriptor, animations []reviewAnimation) []section {
 	return []section{
 		{
 			key:   "summary",
@@ -159,6 +209,13 @@ func buildSections(path string, data mdt.FighterData, desc descriptor.Descriptor
 			},
 		},
 		{
+			key:   "shield-pose",
+			title: "Shield Pose",
+			body: func() string {
+				return renderShieldPose(data)
+			},
+		},
+		{
 			key:   "hurtboxes",
 			title: "Hurtboxes",
 			body: func() string {
@@ -191,6 +248,13 @@ func buildSections(path string, data mdt.FighterData, desc descriptor.Descriptor
 			title: "Actions",
 			body: func() string {
 				return renderActions(data)
+			},
+		},
+		{
+			key:   "animations",
+			title: "Animations",
+			body: func() string {
+				return renderAnimations(data, animations)
 			},
 		},
 		{
@@ -586,6 +650,74 @@ func renderItems(data mdt.FighterData) string {
 	return b.String()
 }
 
+func renderShieldPose(data mdt.FighterData) string {
+	if data.ShieldPose.ValuePtr == nil {
+		return "No shield pose parsed.\n"
+	}
+
+	var b strings.Builder
+	shieldPose := data.ShieldPose.ValuePtr
+	fmt.Fprintf(&b, "Offset: %s\n", data.ShieldPose.Offset.String())
+	fmt.Fprintf(&b, "root: %s\n", optionalJointOffset(shieldPose.Root))
+	fmt.Fprintf(&b, "unknown: %s\n", shieldPose.Unknown.String())
+	fmt.Fprintln(&b)
+
+	if shieldPose.Root.ValuePtr == nil {
+		fmt.Fprintln(&b, "No shield pose root joint tree parsed.")
+		return b.String()
+	}
+
+	fmt.Fprintln(&b, "Root joint tree:")
+	renderJointTreeCompact(&b, shieldPose.Root.ValuePtr, shieldPose.Root.Offset, 0, 0)
+
+	poseJoint := shieldPose.Joint()
+	fmt.Fprintln(&b)
+	fmt.Fprintln(&b, "Pose joint tree:")
+	fmt.Fprintln(&b, "  Reference code uses the root joint's child pointer as the shield pose.")
+	fmt.Fprintf(&b, "  pose offset: %s\n", optionalJointOffset(shieldPose.Root.ValuePtr.Child))
+	if poseJoint != nil {
+		renderJointTreeCompact(&b, poseJoint, shieldPose.Root.ValuePtr.Child.Offset, 0, 0)
+	}
+
+	return b.String()
+}
+
+func optionalJointOffset(ptr lib.OptionalPtr[model.Joint]) string {
+	if ptr.ValuePtr == nil {
+		return "<nil>"
+	}
+	return ptr.Offset.String()
+}
+
+func renderJointTreeCompact(b *strings.Builder, joint *model.Joint, offset lib.Addr, depth int, index int) int {
+	if joint == nil {
+		return index
+	}
+	fmt.Fprintf(
+		b,
+		"%03d %s%s  rot:(% .6f,% .6f,% .6f)  trans:(% .6f,% .6f,% .6f)  child:%s  next:%s\n",
+		index,
+		strings.Repeat("  ", depth),
+		offset.String(),
+		joint.Rotation.X,
+		joint.Rotation.Y,
+		joint.Rotation.Z,
+		joint.Translation.X,
+		joint.Translation.Y,
+		joint.Translation.Z,
+		optionalJointOffset(joint.Child),
+		optionalJointOffset(joint.Next),
+	)
+	index++
+	if joint.Child.ValuePtr != nil {
+		index = renderJointTreeCompact(b, joint.Child.ValuePtr, joint.Child.Offset, depth+1, index)
+	}
+	if joint.Next.ValuePtr != nil {
+		index = renderJointTreeCompact(b, joint.Next.ValuePtr, joint.Next.Offset, depth, index)
+	}
+	return index
+}
+
 func renderActions(data mdt.FighterData) string {
 	if data.ActionTable.ValuePtr == nil || len(*data.ActionTable.ValuePtr) == 0 {
 		return "No actions parsed.\n"
@@ -600,6 +732,80 @@ func renderActions(data mdt.FighterData) string {
 			action.AnimationSize,
 			action.Flags,
 		)
+	}
+	return b.String()
+}
+
+func renderAnimations(data mdt.FighterData, animations []reviewAnimation) string {
+	actionRefs := animationActionRefs(data)
+	if len(animations) == 0 {
+		if len(actionRefs) == 0 {
+			return "No animation bundle parsed and no action animation references found.\nRun with -animations /path/to/PlXXAJ.dat to list every animation in the animation bundle.\n"
+		}
+		return renderActionAnimationRefs(actionRefs)
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "Animations: %d\n", len(animations))
+	fmt.Fprintf(&b, "Action animation references: %d\n\n", len(actionRefs))
+	for _, animation := range animations {
+		refs := actionRefs[animation.Offset]
+		fmt.Fprintf(&b, "%03d  offset:0x%X  size:%d  root:%s  frames:%g  nodes:%d  tracks:%d  refs:%d\n",
+			animation.Index,
+			animation.Offset,
+			animation.Size,
+			emptyDefault(animation.Root, "<unknown>"),
+			animation.Data.FrameCount,
+			len(animation.Data.TracksCounts),
+			animationTrackCount(animation.Data),
+			len(refs),
+		)
+		if len(refs) > 0 {
+			for _, ref := range refs {
+				fmt.Fprintf(&b, "      action %03d  %-40s anim_size:%d\n", ref.Index, ref.Name, ref.Size)
+			}
+		}
+	}
+
+	var unparsed []int64
+	for offset := range actionRefs {
+		if !hasAnimationOffset(animations, offset) {
+			unparsed = append(unparsed, offset)
+		}
+	}
+	sort.Slice(unparsed, func(i, j int) bool { return unparsed[i] < unparsed[j] })
+	if len(unparsed) > 0 {
+		fmt.Fprintln(&b)
+		fmt.Fprintln(&b, "Action references missing from the parsed animation bundle:")
+		for _, offset := range unparsed {
+			fmt.Fprintf(&b, "  offset:0x%X\n", offset)
+			for _, ref := range actionRefs[offset] {
+				fmt.Fprintf(&b, "      action %03d  %-40s anim_size:%d\n", ref.Index, ref.Name, ref.Size)
+			}
+		}
+	}
+
+	return b.String()
+}
+
+func renderActionAnimationRefs(actionRefs map[int64][]actionAnimationRef) string {
+	offsets := make([]int64, 0, len(actionRefs))
+	for offset := range actionRefs {
+		offsets = append(offsets, offset)
+	}
+	sort.Slice(offsets, func(i, j int) bool { return offsets[i] < offsets[j] })
+
+	var b strings.Builder
+	fmt.Fprintln(&b, "No animation bundle parsed.")
+	fmt.Fprintln(&b, "Showing only animation offsets referenced by actions.")
+	fmt.Fprintln(&b, "Run with -animations /path/to/PlXXAJ.dat to list every animation in the animation bundle.")
+	fmt.Fprintln(&b)
+	for _, offset := range offsets {
+		refs := actionRefs[offset]
+		fmt.Fprintf(&b, "offset:0x%X  refs:%d\n", offset, len(refs))
+		for _, ref := range refs {
+			fmt.Fprintf(&b, "    action %03d  %-40s anim_size:%d\n", ref.Index, ref.Name, ref.Size)
+		}
 	}
 	return b.String()
 }
@@ -624,6 +830,86 @@ func renderSubactions(data mdt.FighterData) string {
 		return "Actions parsed, but none had subactions.\n"
 	}
 	return b.String()
+}
+
+func readAnimationBundle(path string) ([]reviewAnimation, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	files, offsets, err := mdt.SplitAnimationFile(binread.NewReader(file))
+	if err != nil {
+		return nil, err
+	}
+
+	animations := make([]reviewAnimation, 0, len(files))
+	for i, fileData := range files {
+		var animationFile mdt.AnimationFile
+		animationData, desc, err := animationFile.ReadFromBytes(fileData)
+		if err != nil {
+			return nil, fmt.Errorf("animation %d at 0x%X: %w", i, offsets[i], err)
+		}
+		root, err := desc.FirstRootName()
+		if err != nil {
+			root = ""
+		}
+		animations = append(animations, reviewAnimation{
+			Index:  i,
+			Offset: offsets[i],
+			Size:   len(fileData),
+			Root:   root,
+			Data:   animationData,
+		})
+	}
+	return animations, nil
+}
+
+func animationActionRefs(data mdt.FighterData) map[int64][]actionAnimationRef {
+	refs := make(map[int64][]actionAnimationRef)
+	if data.ActionTable.ValuePtr == nil {
+		return refs
+	}
+	for i, action := range *data.ActionTable.ValuePtr {
+		if action.AnimationSize == 0 || action.Animation.Offset == 0 {
+			continue
+		}
+		offset := action.Animation.Offset.ToSeek() - 0x20
+		refs[offset] = append(refs[offset], actionAnimationRef{
+			Index: i,
+			Name:  actionName(action),
+			Size:  action.AnimationSize,
+		})
+	}
+	return refs
+}
+
+func animationTrackCount(animation mdt.AnimationData) int {
+	if animation.Tracks.ValuePtr == nil {
+		return 0
+	}
+	count := 0
+	for _, tracks := range *animation.Tracks.ValuePtr {
+		count += len(tracks)
+	}
+	return count
+}
+
+func hasAnimationOffset(animations []reviewAnimation, offset int64) bool {
+	for _, animation := range animations {
+		if animation.Offset == offset {
+			return true
+		}
+	}
+	return false
+}
+
+func emptyDefault(value string, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
 }
 
 func runMenu(sections []section) {
