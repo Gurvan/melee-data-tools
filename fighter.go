@@ -18,7 +18,8 @@ type FighterData struct {
 	AttributesSpecial Ptr[attributes.Special]
 	ModelParams       Ptr[attributes.ModelParams]
 	ActionTable       Ptr[fighter.ActionTable]
-	_                 [16]byte
+	AnimInterpolation Ptr[fighter.AnimInterpolationTable]
+	_                 [12]byte
 	ShieldPose        Ptr[ShieldPose]
 	_                 [12]byte
 	Hurtboxes         Ptr[fighter.Hurtboxes]

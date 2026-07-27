@@ -99,25 +99,24 @@ type ActionTable []Action
 
 var _ binread.BinReader = (*ActionTable)(nil)
 
-func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
-	var count int = 0
-
-	// Get number of actions from the relocation table in the file descriptor.
-	// Can't get it if the ActionTable is not parsed as a part of a FighterFile,
-	// so do nothing in this case.
-	if len(args) == 0 {
-		logger.Warning.Println("ActionTable needs to be parsed as a part of FighterFile")
-		return nil
-	}
+// relocEntryCount returns how many entries of entrySize fit in the block the reader is
+// positioned at the start of, taking the block's size from the file descriptor's relocation
+// table. A table sized this way can only be read as a part of a FighterFile, which is what
+// threads the relocation table through the parse, so ok is false when it is missing.
+func relocEntryCount(r *binread.Reader, args []Args, entrySize int) (count int, ok bool) {
 	for _, args := range args {
 		if reloc, ok := args["relocation"].(*Relocation); ok && reloc != nil {
-			offset := Addr(r.CurrentPosition())
-			count = int((*reloc)[offset]) / ActionSize
-			break
-		} else {
-			logger.Warning.Println("ActionTable needs to be parsed as a part of FighterFile")
-			return nil
+			return int((*reloc)[Addr(r.CurrentPosition())]) / entrySize, true
 		}
+	}
+	return 0, false
+}
+
+func (t *ActionTable) BinRead(r *binread.Reader, args ...Args) error {
+	count, ok := relocEntryCount(r, args, ActionSize)
+	if !ok {
+		logger.Warning.Println("ActionTable needs to be parsed as a part of FighterFile")
+		return nil
 	}
 
 	actions := make([]Action, count)
