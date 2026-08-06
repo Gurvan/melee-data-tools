@@ -587,7 +587,7 @@ func (WindEffect) isSubaction() {}
 // 0x0B
 type CreateHitboxItem struct {
 	ID                   uint32 `bit:"3"`
-	_                    uint32 `bit:"3"`
+	HitGroup             uint32 `bit:"3"`
 	BoneId               uint32 `bit:"7"`
 	Damage               uint32 `bit:"13"`
 	Size                 uint32 `bit:"16"`
