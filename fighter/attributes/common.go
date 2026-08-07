@@ -72,8 +72,8 @@ type Common struct {
 	_                               int32   // unknown
 	LedgeJumpStartSpeedHorizontal   float32
 	LedgeJumpStartSpeedVertical     float32
-	_                               float32 // item_throw_velocity
-	_                               float32 // item_throw_damage_scale
+	ItemThrowVelocity               float32
+	ItemThrowDamageScale            float32
 	SpecialSGroundSpeedMultiplier   float32
 	_                               float32
 	_                               float32

@@ -15,11 +15,99 @@ import (
 
 type Item struct {
 	Attributes Ptr[Attributes]
-	_          Addr
-	Hurtboxes  SizedArray[Hurtbox]
-	States     States
-	Model      Ptr[Model]
-	_          Addr // Dynamics
+
+	// SpecificAttributes points at the article's own attribute block, the article-level
+	// counterpart of a fighter's special attributes. It is null (0x20 once decoded) for
+	// articles that have none, and the block's layout differs from article to article, so
+	// the block itself is only decoded for the (fighter, slot) pairs whose shape has been
+	// worked out - see decodeSpecificAttributes.
+	SpecificAttributes Addr
+
+	Hurtboxes SizedArray[Hurtbox]
+	States    States
+	Model     Ptr[Model]
+	_         Addr // Dynamics
+
+	// Vegetable holds the decoded specific attributes of Peach's vegetable article, and is
+	// nil for every other article. It is not read from this position in the struct, so the
+	// binary decoder must skip it.
+	Vegetable *VegetableAttributes `binread:"-"`
+}
+
+// Lifetime reports how many frames the article lasts before it expires, for articles whose
+// specific attributes carry an override. The second result is false when this article has
+// none, in which case the game's global item default applies.
+func (i *Item) Lifetime() (float32, bool) {
+	if i.Vegetable != nil {
+		return i.Vegetable.Duration, true
+	}
+	return 0, false
+}
+
+// VegetableFace is one row of the table Peach's vegetable draws its face from: Weight is the
+// row's share of the draw (the rows are picked in proportion to their weights, they are not
+// percentages), and Damage is what a vegetable wearing that face deals when thrown.
+type VegetableFace struct {
+	Weight int32
+	Damage int32
+}
+
+// VegetableAttributes is the specific-attributes block of Peach's vegetable article: how long
+// a pulled vegetable lasts before it vanishes, followed by the face table. The row count is
+// stored inline ahead of the rows rather than as the usual offset/size pair, so this block
+// needs its own decoder.
+type VegetableAttributes struct {
+	Duration float32
+	Faces    []VegetableFace
+}
+
+var _ binread.BinReader = (*VegetableAttributes)(nil)
+
+func (a *VegetableAttributes) BinRead(r *binread.Reader, args ...Args) error {
+	if err := r.Decode(&a.Duration, args...); err != nil {
+		return err
+	}
+
+	var rowCount int32
+	if err := r.Decode(&rowCount, args...); err != nil {
+		return err
+	}
+	// The row count comes straight out of the file, so refuse anything that could not
+	// possibly be a face table rather than trusting it into an allocation.
+	if rowCount < 0 || int64(rowCount)*8 > r.Size() {
+		return fmt.Errorf("vegetable face table claims %d rows, which does not fit the file", rowCount)
+	}
+
+	a.Faces = make([]VegetableFace, rowCount)
+	return r.Decode(&a.Faces, args...)
+}
+
+// decodeSpecificAttributes decodes the article's specific-attributes block for the articles
+// whose layout is known. The block's shape is article-specific, so this is opt-in per
+// (fighter, slot) exactly the way the slot list in fighterSwitch is: an unlisted article
+// keeps only its raw pointer.
+func decodeSpecificAttributes(r *binread.Reader, it *Item, fighterName string, slot int, args ...Args) error {
+	if it.SpecificAttributes == Addr(0x20) {
+		return nil
+	}
+
+	switch {
+	case fighterName == "Peach" && slot == 1:
+		before := r.CurrentPosition()
+		if _, err := r.Seek(it.SpecificAttributes.ToSeek(), io.SeekStart); err != nil {
+			return err
+		}
+		var attributes VegetableAttributes
+		if err := r.Decode(&attributes, args...); err != nil {
+			return err
+		}
+		it.Vegetable = &attributes
+		if _, err := r.Seek(before, io.SeekStart); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type ItemFlags struct {
@@ -130,7 +218,9 @@ func (s *States) BinRead(r *binread.Reader, args ...Args) error {
 }
 
 type Model struct {
-	Joint        Ptr[model.Joint]
+	// Optional: some articles carry no model of their own (e.g. Peach's vegetable, whose
+	// model lives with the common items).
+	Joint        OptionalPtr[model.Joint]
 	BoneCount    int32
 	BoneAttachID int32
 	BitField     int32
@@ -163,10 +253,11 @@ func (a *Items) BinRead(r *binread.Reader, args ...Args) error {
 		}
 	}
 
-	indices, err := fighterSwitch(firstRoot)
+	fighterName, err := fighterName(firstRoot)
 	if err != nil {
 		return err
 	}
+	indices := fighterSwitch(fighterName)
 
 	startPos := r.CurrentPosition()
 
@@ -181,6 +272,9 @@ func (a *Items) BinRead(r *binread.Reader, args ...Args) error {
 		if t.ValuePtr == nil {
 			continue
 		}
+		if err := decodeSpecificAttributes(r, t.ValuePtr, fighterName, i, args...); err != nil {
+			return fmt.Errorf("Item(Index:%d): %w", i, err)
+		}
 		items = append(items, *t.ValuePtr)
 	}
 
@@ -193,17 +287,27 @@ func (a *Items) BinRead(r *binread.Reader, args ...Args) error {
 	return nil
 }
 
-func fighterSwitch(firstRoot string) ([]int, error) {
+// fighterName strips the ftData prefix off a fighter data file's first root name, and fails
+// on any file that is not a fighter data file.
+func fighterName(firstRoot string) (string, error) {
 	name := strings.TrimPrefix(firstRoot, "ftData")
 	if name == firstRoot {
-		return nil, errors.New(fmt.Sprintf("File first root %s does not belong to fighter data file.\n", firstRoot))
+		return "", errors.New(fmt.Sprintf("File first root %s does not belong to fighter data file.\n", firstRoot))
 	}
+	return name, nil
+}
+
+func fighterSwitch(name string) []int {
 	switch name {
 	case "Fox":
-		return []int{0, 1, 2}, nil
+		return []int{0, 1, 2}
 	case "Falco":
-		return []int{0, 1, 3}, nil
+		return []int{0, 1, 3}
+	case "Peach":
+		// 5-slot table verified against the file layout: the table sits immediately
+		// before the ftData root. Slots 0 and 4 are hitbox-only articles with no model.
+		return []int{0, 1, 2, 3, 4}
 	default:
-		return []int{}, nil
+		return []int{}
 	}
 }

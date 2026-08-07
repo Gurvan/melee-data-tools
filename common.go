@@ -67,8 +67,19 @@ type BoneLookupTable struct {
 	BoneCount int32
 }
 
+// ItemThrowEntry is one row of the item-throw table: how fast and at what angle a throw
+// state launches the held item, and how it scales the item's damage. Rows are indexed by
+// (action state - 0x5E), LightThrowF through HeavyThrowLw4.
+type ItemThrowEntry struct {
+	Speed            float32
+	Angle            float32
+	DamageMultiplier float32
+}
+
 type CommonData struct {
-	_               [16]byte
+	_               [4]byte
+	ItemThrows      Ptr[[26]ItemThrowEntry]
+	_               [8]byte
 	BoneLookupTable Ptr[[32]Ptr[BoneLookupTable]]
 	_               [64]byte
 }

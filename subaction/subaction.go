@@ -627,6 +627,13 @@ type Unknown0x0FItem struct {
 
 func (Unknown0x0FItem) isSubaction() {}
 
+// One word: the end-of-script terminator directly follows it in Peach's article scripts.
+type Unknown0x11Item struct {
+	_ uint32 `bit:"26"`
+}
+
+func (Unknown0x11Item) isSubaction() {}
+
 func subactionTypeSwitch(i uint8, isItem bool) (SubAction, error) {
 	if isItem {
 		return itemSubactionTypeSwitch(i)
@@ -791,6 +798,8 @@ func itemSubactionTypeSwitch(i uint8) (SubAction, error) {
 		return &RemoveHitbox{}, nil
 	case 0x0F:
 		return &Unknown0x0FItem{}, nil
+	case 0x11:
+		return &Unknown0x11Item{}, nil
 	default:
 		return &emptySubAction{}, &SubActionNotImplemented{Id: i, IsItem: true}
 	}
@@ -865,6 +874,12 @@ func (a *SubActions) BinRead(r *binread.Reader, args ...Args) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	// A null script pointer (0x20 after the Addr rebase) means no subactions at all.
+	if offset == Addr(0x20) {
+		*a = []SubAction{}
+		return nil
 	}
 
 	before := r.CurrentPosition()
