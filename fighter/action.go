@@ -15,8 +15,8 @@ type ActionFlags struct {
 	UseAnimBasedPhysics        bool        `bit:"1"`
 	LoopAnimation              bool        `bit:"1"`
 	_                          bool        `bit:"1"`
-	_                          bool        `bit:"1"`
 	DisableDynamics            bool        `bit:"1"`
+	UseDynamicsAnimation       bool        `bit:"1"`
 	_                          bool        `bit:"1"`
 	TransNAffectedByModelScale bool        `bit:"1"`
 	_                          uint32      `bit:"3"`

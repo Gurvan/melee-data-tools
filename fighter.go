@@ -22,7 +22,8 @@ type FighterData struct {
 	_                 [8]byte
 	PartPoses         Ptr[fighter.PartPoseTable]
 	ShieldPose        Ptr[ShieldPose]
-	_                 [12]byte
+	_                 [8]byte
+	Dynamics          OptionalPtr[fighter.Dynamics]
 	Hurtboxes         Ptr[fighter.Hurtboxes]
 	_                 [16]byte
 	ECB               Ptr[fighter.ECB]

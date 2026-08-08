@@ -216,6 +216,13 @@ func buildSections(path string, data mdt.FighterData, desc descriptor.Descriptor
 			},
 		},
 		{
+			key:   "dynamics",
+			title: "Dynamic Bones",
+			body: func() string {
+				return dumpPtr(data.Dynamics.ValuePtr)
+			},
+		},
+		{
 			key:   "hurtboxes",
 			title: "Hurtboxes",
 			body: func() string {
@@ -298,6 +305,11 @@ func renderSummary(path string, data mdt.FighterData, desc descriptor.Descriptor
 	fmt.Fprintf(&b, "Hurtboxes: %d\n", lenHurtboxes(data.Hurtboxes.ValuePtr))
 	fmt.Fprintf(&b, "Items: %d\n", len(data.Items))
 	fmt.Fprintf(&b, "Actions: %d\n", lenActionTable(data.ActionTable.ValuePtr))
+	if data.Dynamics.ValuePtr == nil {
+		fmt.Fprintln(&b, "Dynamic bones: 0 sets, 0 colliders")
+	} else {
+		fmt.Fprintf(&b, "Dynamic bones: %d sets, %d colliders\n", len(data.Dynamics.ValuePtr.BoneSets), len(data.Dynamics.ValuePtr.Colliders))
+	}
 	fmt.Fprintf(&b, "ECB: %s\n", yesNo(data.ECB.ValuePtr != nil))
 	fmt.Fprintf(&b, "Jostle box: %s\n", yesNo(data.JostleBox.ValuePtr != nil))
 	fmt.Fprintf(&b, "Model root: %s\n", yesNo(data.Model.ValuePtr != nil))

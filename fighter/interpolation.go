@@ -19,14 +19,9 @@ type AnimInterpolation struct {
 	// every fall, and Marth takes 30 dropping into his crouch and 4 into each side special
 	// angle.
 	Frames uint8
-	// Unknown looks to be dynamics related, though what it selects has not been worked out.
-	// Only the characters with cloth set it - Peach and Zelda on most of their actions,
-	// Marth, Roy and Ganondorf on a handful - and almost only on actions that also set the
-	// DisableDynamics action flag (Peach 252 of 255, Zelda 93 of 93), never the other way
-	// round. Its values are small and dense per character (Peach 0-85, Zelda 0-35, Roy 0-5,
-	// Marth 0-4, Ganondorf 0-1) and group actions that share a pose rather than a length:
-	// every idle takes one value, every ground damage another. It indexes no block in the
-	// fighter data file or the model file, so it is not a plain table offset.
+	// Unknown selects an entry from the fighter's separate dynamic-bone animation table
+	// when the action's UseDynamicsAnimation flag is set. It retains its original name for
+	// API compatibility; use AnimInterpolationTable.DynamicsAnimationIndex to access it.
 	Unknown uint8
 }
 
@@ -59,4 +54,13 @@ func (t AnimInterpolationTable) Frames(i int) uint8 {
 		return 0
 	}
 	return t[i].Frames
+}
+
+// DynamicsAnimationIndex returns the dynamic-bone animation selected by action i, and 0
+// for an index the table does not cover.
+func (t AnimInterpolationTable) DynamicsAnimationIndex(i int) uint8 {
+	if i < 0 || i >= len(t) {
+		return 0
+	}
+	return t[i].Unknown
 }
