@@ -435,10 +435,12 @@ type AnimateTexture struct {
 func (AnimateTexture) isSubaction() {}
 
 // 0x29
+// Poses one of the fighter's part-pose sets: BodyPart picks the set, State the pose in it,
+// Duration the blend length in frames.
 type AnimateModel struct {
 	BodyPart uint32 `bit:"7"`
 	State    uint32 `bit:"7"`
-	_        uint32 `bit:"12"`
+	Duration uint32 `bit:"12"`
 }
 
 func (AnimateModel) isSubaction() {}

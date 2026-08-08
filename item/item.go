@@ -102,9 +102,11 @@ func decodeSpecificAttributes(r *binread.Reader, it *Item, fighterName string, s
 }
 
 type ItemFlags struct {
-	IsHeavy  bool  `bit:"1"`
-	_        uint8 `bit:"4"`
-	HoldKind uint8 `bit:"7"`
+	IsHeavy bool  `bit:"1"`
+	_       uint8 `bit:"4"`
+	// HoldKind is how the article is meant to be carried, and is what picks the pose the
+	// hand carrying it takes: none, open inwards, sword, open downwards or open forwards.
+	HoldKind uint8 `bit:"3"`
 }
 
 func (f *ItemFlags) BinRead(r *binread.Reader, args ...Args) error {
