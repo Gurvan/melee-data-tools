@@ -25,7 +25,8 @@ type FighterData struct {
 	_                 [8]byte
 	Dynamics          OptionalPtr[fighter.Dynamics]
 	Hurtboxes         Ptr[fighter.Hurtboxes]
-	_                 [16]byte
+	_                 [12]byte
+	ItemPickupBoxes   Ptr[fighter.ItemPickupBoxes]
 	ECB               Ptr[fighter.ECB]
 	Items             item.Items
 	_                 [4]byte
