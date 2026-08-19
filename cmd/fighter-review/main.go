@@ -649,7 +649,7 @@ func renderItems(data mdt.FighterData) string {
 	for i, item := range data.Items {
 		fmt.Fprintf(&b, "Item %d\n", i)
 		fmt.Fprintf(&b, "  Attributes: %s\n", yesNo(item.Attributes.ValuePtr != nil))
-		fmt.Fprintf(&b, "  Hurtboxes: %d\n", len(item.Hurtboxes.Data))
+		fmt.Fprintf(&b, "  Hurtboxes: %d\n", len(item.Hurtboxes))
 		fmt.Fprintf(&b, "  States: %d\n", len(item.States))
 		if item.Model.ValuePtr != nil {
 			fmt.Fprintf(&b, "  Model bone count: %d\n", item.Model.ValuePtr.BoneCount)

@@ -21,7 +21,7 @@ type Item struct {
 	// layout differs per article, so only known (fighter, slot) pairs are decoded.
 	SpecificAttributes Addr
 
-	Hurtboxes SizedArray[Hurtbox]
+	Hurtboxes HurtboxList
 	States    States
 	Model     Ptr[Model]
 	_         Addr // Dynamics
@@ -130,6 +130,15 @@ type ECB struct {
 	Right  float32
 }
 
+// GrabBox is where the item offers itself to be grabbed: a point off its own middle plus a box
+// added to the reach of whoever is trying to take it. All zero on articles nobody can carry.
+type GrabBox struct {
+	OffsetX    float32
+	OffsetY    float32
+	HalfWidth  float32
+	HalfHeight float32
+}
+
 type Attributes struct {
 	Flags                ItemFlags
 	ThrowSpeedMultiplier float32
@@ -137,7 +146,8 @@ type Attributes struct {
 	SpinSpeed            float32
 	FallAcceleration     float32
 	MaxFallSpeed         float32
-	_                    [10]float32 // Unk0x18
+	_                    [6]float32 // Unk0x18
+	GrabBox              GrabBox
 	ECB                  ECB
 	_                    [4]float32 // Unk0x50
 	ModelScale           float32
@@ -153,6 +163,56 @@ type Hurtbox struct {
 	TipY      float32
 	TipZ      float32
 	Radius    float32
+}
+
+// HurtboxList is how an item's hurtboxes hang off it: a single pointer to a {count, rows} pair.
+// Every fighter article in the roster leaves the pointer null; the common items carry real ones.
+type HurtboxList []Hurtbox
+
+var _ binread.BinReader = (*HurtboxList)(nil)
+
+func (h *HurtboxList) BinRead(r *binread.Reader, args ...Args) error {
+	var offset Addr
+	if err := r.Decode(&offset); err != nil {
+		return err
+	}
+	if offset == Addr(0x20) {
+		*h = nil
+		return nil
+	}
+
+	before := r.CurrentPosition()
+	if _, err := r.Seek(offset.ToSeek(), io.SeekStart); err != nil {
+		return err
+	}
+
+	var count uint32
+	if err := r.Decode(&count); err != nil {
+		return err
+	}
+	// The count comes straight out of the file, so validate it before allocating on it.
+	if int64(count)*0x20 > r.Size() {
+		return fmt.Errorf("item hurtbox list claims %d rows, which does not fit the file", count)
+	}
+	var rows Addr
+	if err := r.Decode(&rows); err != nil {
+		return err
+	}
+	if _, err := r.Seek(rows.ToSeek(), io.SeekStart); err != nil {
+		return err
+	}
+
+	out := make([]Hurtbox, count)
+	if err := r.Decode(&out); err != nil {
+		return err
+	}
+
+	if _, err := r.Seek(before, io.SeekStart); err != nil {
+		return err
+	}
+
+	*h = out
+	return nil
 }
 
 const StateSize = 0x10
@@ -216,6 +276,57 @@ type Model struct {
 	BoneCount    int32
 	BoneAttachID int32
 	BitField     int32
+}
+
+// CommonItem is one entry of the game's shared item table: an item any fighter can come to hold,
+// keyed by the kind replays record as the item's type.
+type CommonItem struct {
+	Kind int
+	Item Item
+}
+
+// CommonItems is the shared item table of the common-item file. Kinds decode opt-in per verified
+// item, like the per-fighter article slots.
+type CommonItems []CommonItem
+
+func (a *CommonItems) BinRead(r *binread.Reader, args ...Args) error {
+	var offset Addr
+	if err := r.Decode(&offset); err != nil {
+		return err
+	}
+
+	before := r.CurrentPosition()
+	if _, err := r.Seek(offset.ToSeek(), io.SeekStart); err != nil {
+		return err
+	}
+	startPos := r.CurrentPosition()
+
+	items := make([]CommonItem, 0)
+	for _, kind := range commonItemSwitch() {
+		var t OptionalPtr[Item]
+		if _, err := r.Seek(startPos+int64(kind)*0x4, io.SeekStart); err != nil {
+			return err
+		}
+		if err := r.Decode(&t, args...); err != nil {
+			return fmt.Errorf("CommonItem(Kind:%d): %w", kind, err)
+		}
+		if t.ValuePtr == nil {
+			continue
+		}
+		items = append(items, CommonItem{Kind: kind, Item: *t.ValuePtr})
+	}
+
+	if _, err := r.Seek(before, io.SeekStart); err != nil {
+		return err
+	}
+
+	*a = items
+	return nil
+}
+
+// commonItemSwitch lists the common items that decode: 6 is the bomb.
+func commonItemSwitch() []int {
+	return []int{6}
 }
 
 type Items []Item

@@ -9,10 +9,13 @@ type ItemPickupBox struct {
 	HalfHeight float32
 }
 
-// ItemPickupBoxes are the three reaches a fighter has, in the order the data stores them: airborne,
-// two-handed (crates and the like), and standing.
+// ItemPickupBoxes are the three reaches a fighter has, in the order the data stores them: standing,
+// two-handed (crates and the like), and airborne. The game picks the third while a fighter is off
+// the ground and the first while they are on it - read out of a memory dump mid-jump, where the
+// airborne reach in use was the third box (and it is the one that reaches below the feet, which
+// only an airborne fighter can use).
 type ItemPickupBoxes struct {
-	Air    ItemPickupBox
-	Crate  ItemPickupBox
 	Ground ItemPickupBox
+	Crate  ItemPickupBox
+	Air    ItemPickupBox
 }

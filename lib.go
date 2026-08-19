@@ -69,6 +69,13 @@ func (f *File[T]) AfterParse(r *binread.Reader, _ ...Args) error {
 		if !strings.HasPrefix(firstRoot, "ftLoadCommonData") {
 			return errors.New(fmt.Sprintf("File first root %s does not belong to player common file.\n", firstRoot))
 		}
+	case ItemCommonData:
+		if firstRoot, err = f.Desc.FirstRootName(); err != nil {
+			return err
+		}
+		if firstRoot != "itPublicData" {
+			return errors.New(fmt.Sprintf("File first root %s does not belong to the common item file.\n", firstRoot))
+		}
 	case StageData:
 		if _, err = f.Desc.FindRootOffset("coll_data"); err != nil {
 			return errors.New(fmt.Sprintf("Couldn't parse file as stage file. Error: %s\n", err))
