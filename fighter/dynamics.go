@@ -6,6 +6,7 @@ import (
 
 	"github.com/Gurvan/melee-data-tools/binread"
 	. "github.com/Gurvan/melee-data-tools/lib"
+	"github.com/Gurvan/melee-data-tools/logger"
 	"github.com/Gurvan/melee-data-tools/model"
 )
 
@@ -88,6 +89,10 @@ type DynamicBoneCollider struct {
 type Dynamics struct {
 	BoneSets  []DynamicBoneSet
 	Colliders []DynamicBoneCollider
+	// AnimationJoints is indexed by an action's dynamics animation index, then by bone set:
+	// it is how many joints from the set's root the action's animation drives instead of
+	// the solver, for actions with the UseDynamicsAnimation flag.
+	AnimationJoints [][]int32
 }
 
 func (d *Dynamics) BinRead(r *binread.Reader, args ...Args) error {
@@ -144,6 +149,35 @@ func (d *Dynamics) BinRead(r *binread.Reader, args ...Args) error {
 		d.Colliders = make([]DynamicBoneCollider, colliderCount)
 		if err := r.Decode(&d.Colliders, args...); err != nil {
 			return err
+		}
+		if _, err := r.Seek(before, io.SeekStart); err != nil {
+			return err
+		}
+	}
+
+	d.AnimationJoints = [][]int32{}
+	if animationTableOffset != Addr(0x20) {
+		before := r.CurrentPosition()
+		if _, err := r.Seek(animationTableOffset.ToSeek(), io.SeekStart); err != nil {
+			return err
+		}
+		count, ok := relocEntryCount(r, args, 4)
+		if !ok {
+			logger.Warning.Println("Dynamics needs to be parsed as a part of FighterFile")
+		}
+		addrs := make([]Addr, count)
+		if err := r.Decode(&addrs, args...); err != nil {
+			return err
+		}
+		for _, addr := range addrs {
+			if _, err := r.Seek(addr.ToSeek(), io.SeekStart); err != nil {
+				return err
+			}
+			joints := make([]int32, len(d.BoneSets))
+			if err := r.Decode(&joints, args...); err != nil {
+				return err
+			}
+			d.AnimationJoints = append(d.AnimationJoints, joints)
 		}
 		if _, err := r.Seek(before, io.SeekStart); err != nil {
 			return err
